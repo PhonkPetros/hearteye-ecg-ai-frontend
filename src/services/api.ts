@@ -1,12 +1,13 @@
 import axios from 'axios';
 
-const API_BASE = 'http://127.0.0.1:5000';   // Hardcoded for now
+const API_BASE = 'http://localhost:5000';   // Hardcoded for now
 
 console.log('🛠️  API base URL:', API_BASE);
 
-const instance = axios.create({
+export const instance = axios.create({
   baseURL: API_BASE,
   timeout: 10000,
+  withCredentials: true,
 });
 
 export interface AnalyzeResponse {
@@ -25,6 +26,7 @@ export type ECGSummary = AnalyzeResponse;
 export interface UploadResponse { 
   file_id: string; 
 }
+
 
 const api = {
   uploadECG: (formData: FormData): Promise<UploadResponse> => {

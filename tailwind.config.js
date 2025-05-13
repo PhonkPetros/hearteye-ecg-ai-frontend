@@ -6,7 +6,13 @@ module.exports = {
   ],
   darkMode: false,
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        hearteye_orange: '#E49F00',
+        hearteye_blue: '#0d3357',
+        hearteye_blue_hover: '#1a4d75'
+      },
+    },
   },
   variants: {
     extend: {},

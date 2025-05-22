@@ -11,7 +11,6 @@ export type RootRoutes = {
   Dashboard: undefined;
   DetailView: { id: string };
   HistoryView: undefined;
-  Login: undefined;
 };
 
 function App() {

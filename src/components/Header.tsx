@@ -20,12 +20,19 @@ const Header: React.FC<HeaderProps> = ({ userName, onLogout }) => {
   }, []);
 
   return (
-    <header className="flex items-center justify-between px-8 py-4 border-b bg-white relative">
-      <div></div>
+    <header className="flex items-center justify-between px-4 py-4 border-b bg-white relative z-30">
+      {/* Logo on the left */}
+      <div>
+        <img src="/LogoHeader.png" alt="HeartEye Logo" className="h-8" />
+      </div>
+
+      {/* User profile on the right */}
       <div className="flex items-center gap-2 relative" ref={ref}>
         <span className="text-2xl text-gray-500 cursor-pointer" onClick={() => setOpen(o => !o)}>👤</span>
         <span className="font-medium cursor-pointer" onClick={() => setOpen(o => !o)}>{userName}</span>
-        <svg className="w-4 h-4 ml-1 text-gray-400 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24" onClick={() => setOpen(o => !o)}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        <svg className="w-4 h-4 ml-1 text-gray-400 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24" onClick={() => setOpen(o => !o)}>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
         {open && (
           <div className="absolute right-0 mt-10 w-32 bg-white border rounded shadow z-10">
             <button

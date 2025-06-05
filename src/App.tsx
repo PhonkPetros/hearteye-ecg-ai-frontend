@@ -6,6 +6,8 @@ import HistoryView from './screens/HistoryView';
 import Login from './screens/Login';
 import Register from './screens/Register';
 import ProtectedRoute from './components/ProtectedRoute';
+import LeadsPlotView from './components/ECGLeadsPlot';
+import ECGLeadsView from './screens/ECGLeadsView';
 
 export type RootRoutes = {
   Dashboard: undefined;
@@ -37,7 +39,11 @@ function App() {
             <HistoryView />
           </ProtectedRoute>
         } />
-
+        <Route path="/ecg/:id/leads" element={
+          <ProtectedRoute>
+            <ECGLeadsView/>
+          </ProtectedRoute>
+        } />
         {/* Redirect to dashboard if authenticated, otherwise to login */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -66,11 +66,11 @@ const Dashboard: React.FC = () => {
     id: item.id,
     fileId: item.file_id,
     patientName: item.patient_name,
+    gender: item.gender,
     date: item.upload_date,
     classification: item.classification,
     summary: item.summary,
     plot: item.plot_url,
-    // Add any other fields as needed
     ...item,
   });
 
@@ -287,7 +287,8 @@ const Dashboard: React.FC = () => {
                         <div className="text-gray-500">Patient Information</div>
                         <div>Age: <span className="font-medium">{selected.age ?? '-'}</span></div>
                         <div>Patient: <span className="font-medium">{selected.patientName ?? '-'}</span></div>
-                        <div>Upload: <span className="font-medium">{selected.date ? new Date(selected.date).toLocaleString() : '-'}</span></div>
+                        <div>Gender: <span className="font-medium">{selected.gender ?? '-'}</span></div>
+                        <div>Uploaded: <span className="font-medium">{selected.date ? new Date(selected.date).toLocaleString() : '-'}</span></div>
                       </div>
                       <div>
                         <div className="text-gray-500">Intervals</div>

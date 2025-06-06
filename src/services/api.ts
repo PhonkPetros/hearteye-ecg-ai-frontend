@@ -1,8 +1,9 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:5000';   // Hardcoded for now
+// Use different API URLs for development vs production
+const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : '';
 
-console.log('🛠️  API base URL:', API_BASE);
+console.log('🛠️  API base URL:', API_BASE, 'Environment:', process.env.NODE_ENV);
 
 export const instance = axios.create({
   baseURL: API_BASE,

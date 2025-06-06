@@ -2,7 +2,7 @@
   "name": "hearteye-frontend",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://127.0.0.1:5000",
+  "proxy": "http://localhost:80",
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
     "@testing-library/dom": "^10.4.0",

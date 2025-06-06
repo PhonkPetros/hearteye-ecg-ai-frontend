@@ -1,10 +1,15 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000';
+// Use different API URLs for development vs production
+const API_URL = process.env.NODE_ENV === 'production' ? '/api' : '';
+
+console.log('🔐 Auth service initialized with API_URL:', API_URL, 'Environment:', process.env.NODE_ENV);
 
 // Create axios instance with base URL
 export const api = axios.create({
-  baseURL: API_URL
+  baseURL: API_URL,
+  withCredentials: true,
+  timeout: 10000
 });
 
 // Add request interceptor to include token
@@ -13,10 +18,25 @@ api.interceptors.request.use(
     const token = authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔐 Adding auth token to request:', config.url);
     }
+    console.log('🔐 Making request to:', `${config.baseURL || ''}${config.url || ''}`);
     return config;
   },
   (error) => {
+    console.error('🔐 Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log('🔐 Response received:', response.status, response.config.url);
+    return response;
+  },
+  (error) => {
+    console.error('🔐 Response error:', error.response?.status, error.response?.data, error.config?.url);
     return Promise.reject(error);
   }
 );
@@ -45,19 +65,35 @@ export interface AuthResponse {
 
 const authService = {
   async login(data: LoginData): Promise<AuthResponse> {
-    const response = await api.post('/auth/login', data);
-    if (response.data.access_token) {
-      localStorage.setItem('user', JSON.stringify(response.data));
+    console.log('🔐 Attempting login for user:', data.username);
+    try {
+      const response = await api.post('/auth/login', data);
+      console.log('🔐 Login successful:', response.data);
+      if (response.data.access_token) {
+        localStorage.setItem('user', JSON.stringify(response.data));
+        console.log('🔐 Token stored in localStorage');
+      }
+      return response.data;
+    } catch (error) {
+      console.error('🔐 Login failed:', error);
+      throw error;
     }
-    return response.data;
   },
 
   async register(data: RegisterData): Promise<{ message: string }> {
-    const response = await api.post('/auth/register', data);
-    return response.data;
+    console.log('🔐 Attempting registration for user:', data.username);
+    try {
+      const response = await api.post('/auth/register', data);
+      console.log('🔐 Registration successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('🔐 Registration failed:', error);
+      throw error;
+    }
   },
 
   logout(): void {
+    console.log('🔐 Logging out user');
     localStorage.removeItem('user');
   },
 
@@ -65,8 +101,10 @@ const authService = {
     const userStr = localStorage.getItem('user');
     if (userStr) {
       const userData = JSON.parse(userStr);
+      console.log('🔐 Current user found:', userData.user?.username);
       return userData.user;
     }
+    console.log('🔐 No current user found');
     return null;
   },
 

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use different API URLs for development vs production
-const API_URL = process.env.NODE_ENV === 'production' ? '/api' : '';
+const API_URL = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
 
 console.log('🔐 Auth service initialized with API_URL:', API_URL, 'Environment:', process.env.NODE_ENV);
 
@@ -9,7 +9,7 @@ console.log('🔐 Auth service initialized with API_URL:', API_URL, 'Environment
 export const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-  timeout: 10000
+  timeout: 100000
 });
 
 // Add request interceptor to include token

@@ -1,13 +1,14 @@
 import axios from 'axios';
 
 // Use different API URLs for development vs production
-const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : '';
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
+
 
 console.log('🛠️  API base URL:', API_BASE, 'Environment:', process.env.NODE_ENV);
 
 export const instance = axios.create({
   baseURL: API_BASE,
-  timeout: 10000,
+  timeout: 100000,
   withCredentials: true,
 });
 

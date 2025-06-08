@@ -47,7 +47,13 @@ const Dashboard: React.FC = () => {
       setHistory(mapped);
       setPage(1); // Reset to first page on new search
       if (mapped.length > 0) {
-        setSelected(mapped[0]);
+        try {
+          const fullDetails = await ecgService.getECGDetails(mapped[0].fileId);
+          setSelected(mapRecord(fullDetails));
+        } catch {
+          // Fallback to basic record if detail fetch fails
+          setSelected(mapped[0]);
+        }
       } else {
         setSelected(null);
       }

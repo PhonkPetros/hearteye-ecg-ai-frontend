@@ -1,9 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import FileUpload from '../components/FileUpload';
 import PatientHistory from '../components/PatientHistory';
 import ECGAnalysisPanel from '../components/ECGAnalysisPanel';
 import SearchBar from '../components/SearchBar';
 import ecgService, { ECGRecord } from '../services/ecgService';
+
+// mapRecord outside of component to avoid re-creation on each render
+const mapRecord = (item: any): ECGRecord => ({
+  id: item.id,
+  fileId: item.file_id,
+  patientName: item.patient_name,
+  age: item.age,
+  gender: item.gender,
+  date: item.upload_date,
+  classification: item.classification,
+  summary: item.summary,
+  plot: item.plot_url,
+  ...item,
+});
 
 const Dashboard: React.FC = () => {
   const [uploading, setUploading] = useState(false);
@@ -19,47 +33,12 @@ const Dashboard: React.FC = () => {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // Pagination state for history
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
-  const totalPages = Math.ceil(history.length / pageSize);
-  const paginatedHistory = history.slice((page - 1) * pageSize, page * pageSize);
-
+  const [, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [suggestions, setSuggestions] = useState<ECGRecord[]>([]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
-
-  // Auto-suggest logic
-  useEffect(() => {
-    if (search.trim() === '') {
-      setSuggestions([]);
-      return;
-    }
-    const lower = search.toLowerCase();
-    const filtered = history.filter(
-      r =>
-        (r.fileId && r.fileId.toLowerCase().includes(lower)) ||
-        (r.patientName && r.patientName.toLowerCase().includes(lower))
-    );
-    setSuggestions(filtered.slice(0, 5));
-  }, [search, history]);
-
-  const mapRecord = (item: any): ECGRecord => ({
-    id: item.id,
-    fileId: item.file_id,
-    patientName: item.patient_name,
-    age: item.age,
-    gender: item.gender,
-    date: item.upload_date,
-    classification: item.classification,
-    summary: item.summary,
-    plot: item.plot_url,
-    ...item,
-  });
-
-  const fetchHistory = async (searchQuery = '') => {
+  // Memoize fetchHistory to avoid ESLint warning
+  const fetchHistory = useCallback(async (searchQuery = '') => {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
@@ -77,7 +56,26 @@ const Dashboard: React.FC = () => {
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  // Auto-suggest logic
+  useEffect(() => {
+    if (search.trim() === '') {
+      setSuggestions([]);
+      return;
+    }
+    const lower = search.toLowerCase();
+    const filtered = history.filter(
+      r =>
+        (r.fileId && r.fileId.toLowerCase().includes(lower)) ||
+        (r.patientName && r.patientName.toLowerCase().includes(lower))
+    );
+    setSuggestions(filtered.slice(0, 5));
+  }, [search, history]);
 
   // Upload handler from FileUpload component
   const handleUpload = async ({
@@ -93,8 +91,8 @@ const Dashboard: React.FC = () => {
   }) => {
     try {
       setUploading(true);
-      setUploadError('');
-      setUploadSuccess('');
+      setUploadError(null);
+      setUploadSuccess(null);
 
       // Create form data here, including patient info
       const formData = new FormData();
@@ -129,56 +127,52 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-        <div className="flex-1 flex flex-col overflow-auto">
-          {/* Search bar at the top */}
-          <div className="px-8 pt-6 pb-2">
-            <SearchBar
-              search={search}
-              onSearchChange={setSearch}
-              suggestions={suggestions}
-              onSelect={handleSelectRecord}
+    <div className="flex-1 flex flex-col overflow-auto">
+      {/* Search bar at the top */}
+      <div className="px-8 pt-6 pb-2">
+        <SearchBar
+          search={search}
+          onSearchChange={setSearch}
+          suggestions={suggestions}
+          onSelect={handleSelectRecord}
+        />
+      </div>
+
+      <main className="flex-1 grid grid-cols-5 gap-6 p-8">
+        {/* Left column: Upload + History */}
+        <section className="col-span-2 flex flex-col h-full gap-4">
+          {/* Upload (top, smaller) */}
+          <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center justify-center mb-2">
+            <h3 className="font-semibold mb-2 text-base">Upload an ECG File</h3>
+            <FileUpload
+              onUpload={handleUpload}
+              uploading={uploading}
+              uploadError={uploadError}
+              uploadSuccess={uploadSuccess}
             />
           </div>
 
-          <main className="flex-1 grid grid-cols-5 gap-6 p-8">
-            {/* Left column: Upload + History */}
-            <section className="col-span-2 flex flex-col h-full gap-4">
-              {/* Upload (top, smaller) */}
-              <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center justify-center mb-2">
-                <h3 className="font-semibold mb-2 text-base">Upload an ECG File</h3>
-                <FileUpload
-                  onUpload={handleUpload}
-                  uploading={uploading}
-                  uploadError={uploadError}
-                  uploadSuccess={uploadSuccess}
-                />
-              </div>
+          {/* Patient History (bottom, paginated) */}
+          <PatientHistory
+            history={history}
+            selected={selected}
+            onSelectRecord={handleSelectRecord}
+            historyLoading={historyLoading}
+            historyError={historyError}
+            compact={true}
+          />
+        </section>
 
-              {/* Patient History (bottom, paginated) */}
-              <PatientHistory
-                history={history}
-                paginatedHistory={paginatedHistory}
-                selected={selected}
-                onSelectRecord={handleSelectRecord}
-                historyLoading={historyLoading}
-                historyError={historyError}
-                page={page}
-                setPage={setPage}
-                totalPages={totalPages}
-                compact={true}
-              />
-            </section>
-
-            {/* Right column: Plot and values */}
-            <section className="col-span-3 flex flex-col h-full">
-              <ECGAnalysisPanel
-                selected={selected}
-                analysisLoading={analysisLoading}
-                analysisError={analysisError}
-              />
-            </section>
-          </main>
-        </div>
+        {/* Right column: Plot and values */}
+        <section className="col-span-3 flex flex-col h-full">
+          <ECGAnalysisPanel
+            selected={selected}
+            analysisLoading={analysisLoading}
+            analysisError={analysisError}
+          />
+        </section>
+      </main>
+    </div>
   );
 };
 

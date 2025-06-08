@@ -5,16 +5,10 @@ import ecgService, { ECGRecord } from '../services/ecgService';
 
 export default function HistoryView() {
   const [records, setRecords] = useState<ECGRecord[]>([]);
-  const [sortKey, setSortKey] = useState<'date' | 'patientName' | 'classification'>('date');
   const [search, setSearch] = useState('');
   const [suggestions, setSuggestions] = useState<ECGRecord[]>([]);
   const [selected, setSelected] = useState<ECGRecord | null>(null);
-
-  // Pagination
-  const [page, setPage] = useState(1);
   const pageSize = 10;
-  const totalPages = Math.ceil(records.length / pageSize);
-  const paginatedHistory = records.slice((page - 1) * pageSize, page * pageSize);
 
   useEffect(() => {
     const fetch = async () => {
@@ -61,49 +55,32 @@ export default function HistoryView() {
     if (found) setSelected(found);
   };
 
-  const sortedRecords = [...records].sort((a, b) => {
-    if (sortKey === 'date') return new Date(b.date).getTime() - new Date(a.date).getTime();
-    return (a[sortKey] ?? '').localeCompare(b[sortKey] ?? '');
-  });
-
   return (
-        <div className="flex flex-col flex-1 overflow-auto">
-          <div className="px-8 pt-6 pb-2">
-            <SearchBar
-              search={search}
-              onSearchChange={setSearch}
-              suggestions={suggestions}
-              onSelect={handleSelectRecord}
-            />
-          </div>
+    <div className="flex flex-col flex-1 overflow-auto">
+      <div className="px-8 pt-6 pb-2">
+        <SearchBar
+          search={search}
+          onSearchChange={setSearch}
+          suggestions={suggestions}
+          onSelect={handleSelectRecord}
+        />
+      </div>
 
-          <div className="px-8 py-4">
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl font-bold">Patient History</h1>
-              <select
-                value={sortKey}
-                onChange={e => setSortKey(e.target.value as any)}
-                className="border px-2 py-1 rounded"
-              >
-                <option value="date">Sort by Date</option>
-                <option value="patientName">Sort by Patient</option>
-                <option value="classification">Sort by Class</option>
-              </select>
-            </div>
-
-            <PatientHistory
-              history={records}
-              paginatedHistory={paginatedHistory}
-              selected={selected}
-              onSelectRecord={handleSelectRecord}
-              historyLoading={false}
-              historyError={null}
-              page={page}
-              setPage={setPage}
-              totalPages={totalPages}
-              compact={false}
-            />
-          </div>
+      <div className="px-8 py-4">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Patient History</h1>
         </div>
+
+        <PatientHistory
+          history={records}
+          selected={selected}
+          onSelectRecord={handleSelectRecord}
+          historyLoading={false}
+          historyError={null}
+          compact={false}
+          pageSize={pageSize}
+        />
+      </div>
+    </div>
   );
 }

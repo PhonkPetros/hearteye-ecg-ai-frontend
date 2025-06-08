@@ -62,6 +62,10 @@ const ecgService = {
     return response.data;
   },
 
+  async updateNotes(id: string, notes: string): Promise<void> {
+     await instance.put(`/api/ecg/${id}/notes`, { notes });
+  },
+
   async getCleanedLeads(fileId: string): Promise<CleanedLeadsResponse> {
   const response = await instance.get(`/ecg/${fileId}/leads`);
   const raw = response.data;

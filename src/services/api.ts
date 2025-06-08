@@ -44,7 +44,6 @@ instance.interceptors.request.use(
     const token = authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('🔐 Adding auth token to request:', config.url);
     }
     return config;
   },

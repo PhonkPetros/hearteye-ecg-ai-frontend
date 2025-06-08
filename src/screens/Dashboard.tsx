@@ -3,9 +3,9 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import ecgService, { ECGRecord } from '../services/ecgService';
 import authService from '../services/authService';
+import FileUpload from '../components/FileUpload'; // import the new FileUpload component
 
 const Dashboard: React.FC = () => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
@@ -66,6 +66,7 @@ const Dashboard: React.FC = () => {
     id: item.id,
     fileId: item.file_id,
     patientName: item.patient_name,
+    age: item.age,
     gender: item.gender,
     date: item.upload_date,
     classification: item.classification,
@@ -94,41 +95,42 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleFileDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      await handleFileUpload(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      await handleFileUpload(e.target.files[0]);
-    }
-  };
-
-  const handleFileUpload = async (file: File) => {
-    setUploadError(null);
-    setUploadSuccess(null);
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-      setUploadError('Only ZIP files are allowed.');
-      return;
-    }
+  // Upload handler from FileUpload component
+  const handleUpload = async ({
+  file,
+  patientName,
+  age,
+  gender,
+}: {
+  file: File;
+  patientName: string;
+  age: number | null;
+  gender: string;
+}) => {
+  try {
     setUploading(true);
-    try {
-      await ecgService.uploadECG(file);
-      setUploadSuccess('Upload successful!');
-      await fetchHistory();
-    } catch (err: any) {
-      setUploadError(err.response?.data?.error || 'Upload failed.');
-    } finally {
-      setUploading(false);
-    }
-  };
+    setUploadError('');
+    setUploadSuccess('');
+
+    // Create form data here, including patient info
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('patient_name', patientName);
+    if (age !== null) formData.append('age', age.toString());
+    formData.append('gender', gender);
+
+    // Pass the formData to the service
+    await ecgService.uploadECG(formData);
+
+    setUploadSuccess('Upload successful!');
+    await fetchHistory();
+  } catch (err: any) {
+    setUploadError(err.message || 'Upload failed.');
+  } finally {
+    setUploading(false);
+  }
+};
+
 
   const handleLogout = () => {
     authService.logout();
@@ -152,7 +154,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-        <Header userName={user?.username || 'Patient'} onLogout={handleLogout} />
+      <Header userName={user?.username || 'Patient'} onLogout={handleLogout} />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-auto">
@@ -182,7 +184,10 @@ const Dashboard: React.FC = () => {
                 tabIndex={-1}
                 type="button"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" /></svg>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                </svg>
               </button>
               {showSuggestions && (
                 <ul className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl shadow-lg z-20 mt-2 max-h-56 overflow-y-auto w-full">
@@ -213,18 +218,12 @@ const Dashboard: React.FC = () => {
               {/* Upload (top, smaller) */}
               <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center justify-center mb-2">
                 <h3 className="font-semibold mb-2 text-base">Upload an ECG File</h3>
-                <div
-                  className={`w-full h-16 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer transition ${uploadError ? 'border-red-400' : 'border-gray-300'} hover:border-indigo-400`}
-                  onDrop={handleFileDrop}
-                  onDragOver={e => e.preventDefault()}
-                  onClick={handleFileClick}
-                >
-                  <input type="file" ref={fileInputRef} className="hidden" accept=".zip" onChange={handleFileChange} />
-                  <span className="text-gray-400 text-sm text-center">Drag and drop a file here,<br />or click to upload</span>
-                </div>
-                {uploading && <div className="mt-2 text-sm text-blue-600">Uploading...</div>}
-                {uploadError && <div className="mt-2 text-sm text-red-600">{uploadError}</div>}
-                {uploadSuccess && <div className="mt-2 text-sm text-green-600">{uploadSuccess}</div>}
+                <FileUpload
+                  onUpload={handleUpload}
+                  uploading={uploading}
+                  uploadError={uploadError}
+                  uploadSuccess={uploadSuccess}
+                />
               </div>
               {/* Patient History (bottom, paginated) */}
               <div className="bg-white rounded-lg shadow p-4 flex flex-col flex-1 min-h-0">
@@ -300,12 +299,15 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-4 text-sm">
                       <div>Result: <span className={`font-semibold ${selected.classification === 'Normal' ? 'text-green-600' : 'text-red-600'}`}>{selected.classification ?? '-'}</span></div>
-                      <div>Confidence: <span className="font-semibold text-green-600">{selected.confidence !== null && selected.confidence !== undefined ? `${Math.round(selected.confidence * 100)}%` : '-'}</span></div>
+                      <div>Confidence: <span className="font-semibold">{selected.confidence ? (selected.confidence * 100).toFixed(0) + '%' : '-'}</span></div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500">{selected.notes || 'Note'}</div>
+                    <div className="mt-4">
+                      <h4 className="font-semibold mb-1">Summary</h4>
+                      <p className="text-gray-700 whitespace-pre-line">{selected.summary || 'No summary available.'}</p>
+                    </div>
                   </>
                 ) : (
-                  <div className="text-gray-500 text-sm">No record selected.</div>
+                  <div className="text-gray-500 text-center py-10">Select a record to view details</div>
                 )}
               </div>
             </section>

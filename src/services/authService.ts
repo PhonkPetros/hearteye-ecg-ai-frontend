@@ -57,7 +57,6 @@ const authService = {
   },
 
   logout(): void {
-    console.log('🔐 Logging out user');
     localStorage.removeItem('user');
     window.location.href = '/login'; // redirect to login page on logout
 },
@@ -66,7 +65,6 @@ const authService = {
     const userStr = localStorage.getItem('user');
     if (userStr) {
       const userData = JSON.parse(userStr);
-      console.log('🔐 Current user found:', userData.user?.username);
       return userData.user;
     }
     console.log('🔐 No current user found');

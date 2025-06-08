@@ -53,9 +53,7 @@ const ecgService = {
     return response.data;
   },
 
-  async uploadECG(file: File): Promise<any> {
-    const formData = new FormData();
-    formData.append('file', file);
+  async uploadECG(formData: FormData): Promise<any> {
     const response = await instance.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

@@ -31,8 +31,6 @@ export default function ECGLeadsView() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  console.log('ECGLeadsView data:', data);
-
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="p-4 text-red-600">{error}</div>;
   if (!data) return null;

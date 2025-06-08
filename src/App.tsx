@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './screens/Dashboard';
-import DetailView from './screens/DetailView';
 import HistoryView from './screens/HistoryView';
 import Login from './screens/Login';
 import Register from './screens/Register';
@@ -27,11 +26,6 @@ function App() {
         <Route path="/" element={
           <ProtectedRoute>
             <Dashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/ecg/:id" element={
-          <ProtectedRoute>
-            <DetailView />
           </ProtectedRoute>
         } />
         <Route path="/history" element={

@@ -154,9 +154,9 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          <main className="flex-1 grid grid-cols-3 gap-6 p-8 bg-gray-50">
+          <main className="flex-1 grid grid-cols-5 gap-6 p-8 bg-gray-50">
             {/* Left column: Upload + History */}
-            <section className="col-span-1 flex flex-col h-full gap-4">
+            <section className="col-span-2 flex flex-col h-full gap-4">
               {/* Upload (top, smaller) */}
               <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center justify-center mb-2">
                 <h3 className="font-semibold mb-2 text-base">Upload an ECG File</h3>
@@ -179,11 +179,12 @@ const Dashboard: React.FC = () => {
                 page={page}
                 setPage={setPage}
                 totalPages={totalPages}
+                compact={true}
               />
             </section>
 
             {/* Right column: Plot and values */}
-            <section className="col-span-2 flex flex-col h-full">
+            <section className="col-span-3 flex flex-col h-full">
               <ECGAnalysisPanel
                 selected={selected}
                 analysisLoading={analysisLoading}

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import {instance} from './api';
 
 // Use different API URLs for development vs production
 const API_URL = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
@@ -6,14 +6,14 @@ const API_URL = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
 console.log('🔐 Auth service initialized with API_URL:', API_URL, 'Environment:', process.env.NODE_ENV);
 
 // Create axios instance with base URL
-export const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true,
-  timeout: 100000
-});
+// export const api = axios.create({
+//   baseURL: API_URL,
+//   withCredentials: true,
+//   timeout: 100000
+// });
 
 // Add request interceptor to include token
-api.interceptors.request.use(
+instance.interceptors.request.use(
   (config) => {
     const token = authService.getToken();
     if (token) {
@@ -30,7 +30,7 @@ api.interceptors.request.use(
 );
 
 // Add response interceptor for debugging
-api.interceptors.response.use(
+instance.interceptors.response.use(
   (response) => {
     console.log('🔐 Response received:', response.status, response.config.url);
     return response;
@@ -67,7 +67,7 @@ const authService = {
   async login(data: LoginData): Promise<AuthResponse> {
     console.log('🔐 Attempting login for user:', data.username);
     try {
-      const response = await api.post('/auth/login', data);
+      const response = await instance.post('/auth/login', data);
       console.log('🔐 Login successful:', response.data);
       if (response.data.access_token) {
         localStorage.setItem('user', JSON.stringify(response.data));
@@ -83,7 +83,7 @@ const authService = {
   async register(data: RegisterData): Promise<{ message: string }> {
     console.log('🔐 Attempting registration for user:', data.username);
     try {
-      const response = await api.post('/auth/register', data);
+      const response = await instance.post('/auth/register', data);
       console.log('🔐 Registration successful:', response.data);
       return response.data;
     } catch (error) {

@@ -1,4 +1,4 @@
-import { api } from './authService';
+import { instance } from './api';
 
 export interface ECGRecord {
   id: number;
@@ -44,19 +44,19 @@ export interface CleanedLeadsResponse {
 const ecgService = {
   async getHistory(search?: string): Promise<ECGRecord[]> {
     const params = search ? { params: { search } } : undefined;
-    const response = await api.get('/history', params);
+    const response = await instance.get('/history', params);
     return response.data;
   },
 
   async getECGDetails(fileId: string): Promise<ECGRecord> {
-    const response = await api.get(`/record/${fileId}`);
+    const response = await instance.get(`/record/${fileId}`);
     return response.data;
   },
 
   async uploadECG(file: File): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post('/upload', formData, {
+    const response = await instance.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -65,7 +65,7 @@ const ecgService = {
   },
 
   async getCleanedLeads(fileId: string): Promise<CleanedLeadsResponse> {
-  const response = await api.get(`/ecg/${fileId}/leads`);
+  const response = await instance.get(`/ecg/${fileId}/leads`);
   const raw = response.data;
 
   return {

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
 import Dashboard from './screens/Dashboard';
 import HistoryView from './screens/HistoryView';
 import Login from './screens/Login';
@@ -25,20 +26,29 @@ function App() {
         {/* Protected routes */}
         <Route path="/" element={
           <ProtectedRoute>
-            <Dashboard />
+            <Layout>
+              <Dashboard />
+            </Layout>
           </ProtectedRoute>
         } />
+
         <Route path="/history" element={
           <ProtectedRoute>
-            <HistoryView />
+            <Layout>
+              <HistoryView />
+            </Layout>
           </ProtectedRoute>
         } />
+
         <Route path="/ecg/:id/leads" element={
           <ProtectedRoute>
-            <ECGLeadsView/>
+            <Layout>
+              <ECGLeadsView />
+            </Layout>
           </ProtectedRoute>
         } />
-        {/* Redirect to dashboard if authenticated, otherwise to login */}
+
+        {/* Redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import LeadsPlotView from '../components/ECGLeadsPlot';
 import { useParams } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
-import authService from '../services/authService';
 import ecgService, { CleanedLeadsResponse } from '../services/ecgService';
 
 export default function ECGLeadsView() {
@@ -11,13 +8,6 @@ export default function ECGLeadsView() {
   const [data, setData] = useState<CleanedLeadsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const handleLogout = () => {
-    authService.logout();
-    window.location.href = '/login';
-  };
-
-  const user = authService.getCurrentUser();
 
   useEffect(() => {
     if (!id) return;
@@ -36,13 +26,8 @@ export default function ECGLeadsView() {
   if (!data) return null;
 
   return (
-    <div className="flex flex-col h-screen">
-      <Header userName={user?.username || 'Patient'} onLogout={handleLogout} />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          <h1 className="text-2xl font-bold mb-6">ECG {id}</h1>
+          <h1 className="text-2xl font-bold mb-6">{id}</h1>
 
           {/* Patient Info */}
           <div className="grid grid-cols-2 gap-2 text-sm mb-2">
@@ -80,7 +65,5 @@ export default function ECGLeadsView() {
           {/* ECG plot component */}
           <LeadsPlotView data={data} />
         </main>
-      </div>
-    </div>
   );
 }

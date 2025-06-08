@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
 import FileUpload from '../components/FileUpload';
 import PatientHistory from '../components/PatientHistory';
 import ECGAnalysisPanel from '../components/ECGAnalysisPanel';
 import SearchBar from '../components/SearchBar';
 import ecgService, { ECGRecord } from '../services/ecgService';
-import authService from '../services/authService';
 
 const Dashboard: React.FC = () => {
   const [uploading, setUploading] = useState(false);
@@ -118,11 +115,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    authService.logout();
-    window.location.href = '/login';
-  };
-
   const handleSelectRecord = async (fileId: string) => {
     setAnalysisLoading(true);
     setAnalysisError(null);
@@ -136,16 +128,10 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const user = authService.getCurrentUser();
-
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <Header userName={user?.username || 'Patient'} onLogout={handleLogout} />
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar />
         <div className="flex-1 flex flex-col overflow-auto">
           {/* Search bar at the top */}
-          <div className="px-8 pt-6 pb-2 bg-gray-50">
+          <div className="px-8 pt-6 pb-2">
             <SearchBar
               search={search}
               onSearchChange={setSearch}
@@ -154,7 +140,7 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          <main className="flex-1 grid grid-cols-5 gap-6 p-8 bg-gray-50">
+          <main className="flex-1 grid grid-cols-5 gap-6 p-8">
             {/* Left column: Upload + History */}
             <section className="col-span-2 flex flex-col h-full gap-4">
               {/* Upload (top, smaller) */}
@@ -193,8 +179,6 @@ const Dashboard: React.FC = () => {
             </section>
           </main>
         </div>
-      </div>
-    </div>
   );
 };
 

@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
-import Sidebar from '../components/Sidebar';
 import SearchBar from '../components/SearchBar';
 import PatientHistory from '../components/PatientHistory';
 import ecgService, { ECGRecord } from '../services/ecgService';
-import authService from '../services/authService';
 
 export default function HistoryView() {
   const [records, setRecords] = useState<ECGRecord[]>([]);
@@ -69,15 +66,9 @@ export default function HistoryView() {
     return (a[sortKey] ?? '').localeCompare(b[sortKey] ?? '');
   });
 
-  const user = authService.getCurrentUser();
-
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <Header userName={user?.username || 'User'} onLogout={authService.logout} />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
         <div className="flex flex-col flex-1 overflow-auto">
-          <div className="px-8 pt-6 pb-2 bg-gray-50">
+          <div className="px-8 pt-6 pb-2">
             <SearchBar
               search={search}
               onSearchChange={setSearch}
@@ -114,7 +105,5 @@ export default function HistoryView() {
             />
           </div>
         </div>
-      </div>
-    </div>
   );
 }

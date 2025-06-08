@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface NotesEditorProps {
   notes: string;
   onChange: (notes: string) => void;

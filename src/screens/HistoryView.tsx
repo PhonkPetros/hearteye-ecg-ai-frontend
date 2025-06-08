@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import SearchBar from '../components/SearchBar';
 import PatientHistory from '../components/PatientHistory';
 import ecgService, { ECGRecord } from '../services/ecgService';

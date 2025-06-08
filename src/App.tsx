@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './screens/Dashboard';
 import DetailView from './screens/DetailView';
@@ -6,8 +5,8 @@ import HistoryView from './screens/HistoryView';
 import Login from './screens/Login';
 import Register from './screens/Register';
 import ProtectedRoute from './components/ProtectedRoute';
-import LeadsPlotView from './components/ECGLeadsPlot';
 import ECGLeadsView from './screens/ECGLeadsView';
+import AuthWatcher from './components/AuthWatcher';
 
 export type RootRoutes = {
   Dashboard: undefined;
@@ -18,6 +17,7 @@ export type RootRoutes = {
 function App() {
   return (
     <BrowserRouter>
+    <AuthWatcher />
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Login />} />

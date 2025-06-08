@@ -5,42 +5,6 @@ const API_URL = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
 
 console.log('🔐 Auth service initialized with API_URL:', API_URL, 'Environment:', process.env.NODE_ENV);
 
-// Create axios instance with base URL
-// export const api = axios.create({
-//   baseURL: API_URL,
-//   withCredentials: true,
-//   timeout: 100000
-// });
-
-// Add request interceptor to include token
-instance.interceptors.request.use(
-  (config) => {
-    const token = authService.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('🔐 Adding auth token to request:', config.url);
-    }
-    console.log('🔐 Making request to:', `${config.baseURL || ''}${config.url || ''}`);
-    return config;
-  },
-  (error) => {
-    console.error('🔐 Request interceptor error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor for debugging
-instance.interceptors.response.use(
-  (response) => {
-    console.log('🔐 Response received:', response.status, response.config.url);
-    return response;
-  },
-  (error) => {
-    console.error('🔐 Response error:', error.response?.status, error.response?.data, error.config?.url);
-    return Promise.reject(error);
-  }
-);
-
 export interface LoginData {
   username: string;
   password: string;
@@ -95,7 +59,8 @@ const authService = {
   logout(): void {
     console.log('🔐 Logging out user');
     localStorage.removeItem('user');
-  },
+    window.location.href = '/login'; // redirect to login page on logout
+},
 
   getCurrentUser(): User | null {
     const userStr = localStorage.getItem('user');

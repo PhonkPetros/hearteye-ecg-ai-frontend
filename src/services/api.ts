@@ -1,4 +1,5 @@
 import axios from 'axios';
+import authService from './authService'; // import for token refreshing
 
 // Use different API URLs for development vs production
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
@@ -36,6 +37,30 @@ export interface HistoryRecord {
   summary?: AnalyzeResponse['summary'];
   plot?: string;
 }
+
+// Request interceptor to add access token
+instance.interceptors.request.use(
+  (config) => {
+    const token = authService.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔐 Adding auth token to request:', config.url);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+instance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Unauthorized - token invalid or expired
+      authService.logout();
+    }
+    return Promise.reject(error);
+  }
+);
 
 const api = {
   uploadECG: (formData: FormData): Promise<UploadResponse> => {

@@ -1,15 +1,17 @@
-import React from 'react';
-import authService from '../services/authService';
-import { useLocation } from 'react-router-dom';
+import React from "react";
+import { useLocation } from "react-router-dom";
+import logger from "../logger";
+import authService from "../services/authService";
 
 const isTokenValid = (token: string | null): boolean => {
   if (!token) return false;
   try {
-    const [, payload] = token.split('.');
+    const [, payload] = token.split(".");
     const decoded = JSON.parse(atob(payload));
     const exp = decoded.exp * 1000;
     return Date.now() < exp;
-  } catch {
+  } catch (error) {
+    logger.error("Invalid token format or decoding failed", { error });
     return false;
   }
 };
@@ -19,21 +21,31 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const token = authService.getToken();
   const location = useLocation();
 
-  if (!isTokenValid(token)) {
-    authService.logout();
+  try {
+    const token = authService.getToken();
 
-    // Prevent redirect loop: if already on /login or /register, just render children
-    if (location.pathname === '/login' || location.pathname === '/register') {
-      return <>{children}</>;
+    if (!isTokenValid(token)) {
+      try {
+        authService.logout();
+      } catch (logoutError) {
+        logger.error("Error during logout in ProtectedRoute", { logoutError });
+      }
+
+      // Prevent redirect loop: if already on /login or /register, just render children
+      if (location.pathname === "/login" || location.pathname === "/register") {
+        return <>{children}</>;
+      }
+
+      return null;
     }
 
-    return null
+    return <>{children}</>;
+  } catch (error) {
+    logger.error("Unexpected error in ProtectedRoute", { error });
+    return null;
   }
-
-  return <>{children}</>;
 };
 
 export default ProtectedRoute;

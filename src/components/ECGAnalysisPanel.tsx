@@ -1,7 +1,7 @@
-import React from 'react';
-import { ECGRecord } from '../services/ecgService';
-import { useNavigate } from 'react-router-dom';
-
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import logger from "../logger";
+import { ECGRecord } from "../services/ecgService";
 
 interface ECGAnalysisPanelProps {
   selected: ECGRecord | null;
@@ -15,10 +15,31 @@ const ECGAnalysisPanel: React.FC<ECGAnalysisPanelProps> = ({
   analysisError,
 }) => {
   const navigate = useNavigate();
-  
+
+  useEffect(() => {
+    if (analysisError) {
+      logger.error(`ECG analysis error: ${analysisError}`);
+    }
+  }, [analysisError]);
+
+  useEffect(() => {
+    if (selected) {
+      logger.info(
+        `Selected ECG record updated: fileId=${selected.fileId ?? "N/A"}`
+      );
+    } else {
+      logger.info("No ECG record selected");
+    }
+  }, [selected]);
+
   const handleViewLeads = () => {
     if (selected?.fileId) {
+      logger.info(`Navigating to leads view for fileId=${selected.fileId}`);
       navigate(`/ecg/${selected.fileId}/leads`);
+    } else {
+      logger.warn(
+        "Attempted to navigate to leads view without a valid selected ECG fileId"
+      );
     }
   };
 
@@ -29,7 +50,13 @@ const ECGAnalysisPanel: React.FC<ECGAnalysisPanelProps> = ({
         {analysisLoading ? (
           <div className="text-gray-500 text-sm">Loading...</div>
         ) : analysisError ? (
-          <div className="text-red-600 text-sm">{analysisError}</div>
+          <div
+            className="text-red-600 text-sm"
+            role="alert"
+            aria-live="assertive"
+          >
+            {analysisError}
+          </div>
         ) : selected ? (
           <>
             {selected.plot && (
@@ -43,80 +70,86 @@ const ECGAnalysisPanel: React.FC<ECGAnalysisPanelProps> = ({
               <div>
                 <div className="text-gray-500">Patient Information</div>
                 <div>
-                  Age: <span className="font-medium">{selected.age ?? '-'}</span>
+                  Age:{" "}
+                  <span className="font-medium">{selected.age ?? "-"}</span>
                 </div>
                 <div>
-                  Patient:{' '}
-                  <span className="font-medium">{selected.patientName ?? '-'}</span>
-                </div>
-                <div>
-                  Gender: <span className="font-medium">{selected.gender ?? '-'}</span>
-                </div>
-                <div>
-                  Uploaded:{' '}
+                  Patient:{" "}
                   <span className="font-medium">
-                    {selected.date ? new Date(selected.date).toLocaleString() : '-'}
+                    {selected.patientName ?? "-"}
+                  </span>
+                </div>
+                <div>
+                  Gender:{" "}
+                  <span className="font-medium">{selected.gender ?? "-"}</span>
+                </div>
+                <div>
+                  Uploaded:{" "}
+                  <span className="font-medium">
+                    {selected.date
+                      ? new Date(selected.date).toLocaleString()
+                      : "-"}
                   </span>
                 </div>
               </div>
               <div>
                 <div className="text-gray-500">Intervals</div>
                 <div>
-                  QRS:{' '}
+                  QRS:{" "}
                   <span className="font-medium">
-                    {selected.intervals?.qrs_duration_ms ?? '-'}
-                  </span>{' '}
+                    {selected.intervals?.qrs_duration_ms ?? "-"}
+                  </span>{" "}
                   ms
                 </div>
                 <div>
-                  QT:{' '}
+                  QT:{" "}
                   <span className="font-medium">
-                    {selected.intervals?.qt_interval_ms ?? '-'}
-                  </span>{' '}
+                    {selected.intervals?.qt_interval_ms ?? "-"}
+                  </span>{" "}
                   ms
                 </div>
                 <div>
-                  PQ:{' '}
+                  PQ:{" "}
                   <span className="font-medium">
-                    {selected.intervals?.pq_interval_ms ?? '-'}
-                  </span>{' '}
+                    {selected.intervals?.pq_interval_ms ?? "-"}
+                  </span>{" "}
                   ms
                 </div>
                 <div>
-                  P-wave:{' '}
+                  P-wave:{" "}
                   <span className="font-medium">
-                    {selected.intervals?.p_wave_duration_ms ?? '-'}
-                  </span>{' '}
+                    {selected.intervals?.p_wave_duration_ms ?? "-"}
+                  </span>{" "}
                   ms
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-4 text-sm">
               <div>
-                Result:{' '}
+                Result:{" "}
                 <span
                   className={`font-semibold ${
-                    selected.classification === 'Normal'
-                      ? 'text-green-600'
-                      : 'text-red-600'
+                    selected.classification === "Normal"
+                      ? "text-green-600"
+                      : "text-red-600"
                   }`}
                 >
-                  {selected.classification ?? '-'}
+                  {selected.classification ?? "-"}
                 </span>
               </div>
               <div>
-                Confidence:{' '}
+                Confidence:{" "}
                 <span className="font-semibold">
                   {selected.confidence
-                    ? (selected.confidence * 100).toFixed(0) + '%'
-                    : '-'}
+                    ? (selected.confidence * 100).toFixed(0) + "%"
+                    : "-"}
                 </span>
               </div>
             </div>
             <div className="mt-4">
               <h4 className="font-semibold mb-1">Notes</h4>
               <p className="text-gray-700 whitespace-pre-line">
-                {selected.notes || 'No notes available.'}
+                {selected.notes || "No notes available."}
               </p>
             </div>
           </>
@@ -129,7 +162,12 @@ const ECGAnalysisPanel: React.FC<ECGAnalysisPanelProps> = ({
 
       {/* Bottom right-aligned button */}
       <div className="mt-4 flex justify-end">
-        <button onClick={handleViewLeads} className="bg-hearteye_orange text-white text-sm-b px-4 py-2 rounded hover:bg-yellow-500 transition">
+        <button
+          onClick={handleViewLeads}
+          className="bg-hearteye_orange text-white text-sm-b px-4 py-2 rounded hover:bg-yellow-500 transition"
+          disabled={!selected?.fileId}
+          aria-disabled={!selected?.fileId}
+        >
           View all leads
         </button>
       </div>

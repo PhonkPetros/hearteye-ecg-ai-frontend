@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -10,7 +10,7 @@ const Sidebar: React.FC = () => {
         <Link
           to="/"
           className={`font-semibold rounded px-3 py-2 ${
-            location.pathname === '/' ? 'bg-white/20' : 'hover:bg-white/10'
+            location.pathname === "/" ? "bg-white/20" : "hover:bg-white/10"
           }`}
         >
           Dashboard
@@ -18,7 +18,9 @@ const Sidebar: React.FC = () => {
         <Link
           to="/history"
           className={`font-semibold rounded px-3 py-2 ${
-            location.pathname === '/history' ? 'bg-white/20' : 'hover:bg-white/10'
+            location.pathname === "/history"
+              ? "bg-white/20"
+              : "hover:bg-white/10"
           }`}
         >
           History

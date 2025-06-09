@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ECGRecord } from '../services/ecgService';
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import logger from "../logger";
+import { ECGRecord } from "../services/ecgService";
 
 interface PatientHistoryProps {
   history: ECGRecord[];
@@ -16,18 +17,19 @@ interface PatientHistoryProps {
 }
 
 const genderDisplay = (gender: string | undefined) => {
-  if (!gender) return 'Other';
+  if (!gender) return "Other";
   const g = gender.toLowerCase();
-  if (g === 'm' || g === 'male') return 'Male';
-  if (g === 'f' || g === 'female') return 'Female';
-  return 'Other';
+  if (g === "m" || g === "male") return "Male";
+  if (g === "f" || g === "female") return "Female";
+  return "Other";
 };
 
 const classificationColor = (classification?: string | null) => {
-  if (!classification || classification.toLowerCase() === 'unknown') return 'text-black';
-  if (classification.toLowerCase() === 'normal') return 'text-green-600';
-  if (classification.toLowerCase() === 'abnormal') return 'text-red-600';
-  return 'text-red-600';
+  if (!classification || classification.toLowerCase() === "unknown")
+    return "text-black";
+  if (classification.toLowerCase() === "normal") return "text-green-600";
+  if (classification.toLowerCase() === "abnormal") return "text-red-600";
+  return "text-red-600";
 };
 
 const PatientHistory: React.FC<PatientHistoryProps> = ({
@@ -43,38 +45,58 @@ const PatientHistory: React.FC<PatientHistoryProps> = ({
   pageSize = 5,
 }) => {
   const navigate = useNavigate();
-  const [sortKey, setSortKey] = useState<'date' | 'patientName' | 'classification'>('date');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [sortKey, setSortKey] = useState<
+    "date" | "patientName" | "classification"
+  >("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [internalPage, setInternalPage] = useState(1);
   const page = externalPage ?? internalPage;
   const setPage = externalSetPage ?? setInternalPage;
 
+  // Log any historyError once when it appears
+  useEffect(() => {
+    if (historyError) {
+      logger.error("Error loading patient history", { historyError });
+    }
+  }, [historyError]);
+
   const sortedHistory = useMemo(() => {
-    return [...history].sort((a, b) => {
-      if (sortKey === 'date') {
-        const aTime = new Date(a.date).getTime();
-        const bTime = new Date(b.date).getTime();
-        return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
-      } else {
-        const aVal = (a[sortKey] ?? '').toString().toLowerCase();
-        const bVal = (b[sortKey] ?? '').toString().toLowerCase();
-        return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      }
-    });
+    try {
+      return [...history].sort((a, b) => {
+        if (sortKey === "date") {
+          const aTime = new Date(a.date).getTime();
+          const bTime = new Date(b.date).getTime();
+          return sortDirection === "asc" ? aTime - bTime : bTime - aTime;
+        } else {
+          const aVal = (a[sortKey] ?? "").toString().toLowerCase();
+          const bVal = (b[sortKey] ?? "").toString().toLowerCase();
+          return sortDirection === "asc"
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal);
+        }
+      });
+    } catch (e) {
+      logger.error("Sorting error in PatientHistory", { error: e });
+      return history; // fallback to unsorted history on error
+    }
   }, [history, sortKey, sortDirection]);
 
-  const totalPages = externalTotalPages ?? Math.max(1, Math.ceil(sortedHistory.length / pageSize));
+  const totalPages =
+    externalTotalPages ??
+    Math.max(1, Math.ceil(sortedHistory.length / pageSize));
 
   const paginatedHistory = useMemo(() => {
     return sortedHistory.slice((page - 1) * pageSize, page * pageSize);
   }, [sortedHistory, page, pageSize]);
 
-  const onSortKeyChange = (newKey: 'date' | 'patientName' | 'classification') => {
+  const onSortKeyChange = (
+    newKey: "date" | "patientName" | "classification"
+  ) => {
     if (newKey === sortKey) {
-      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(newKey);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
     setPage(1);
   };
@@ -99,7 +121,7 @@ const PatientHistory: React.FC<PatientHistoryProps> = ({
         <div className="flex items-center gap-2">
           <select
             value={sortKey}
-            onChange={e => onSortKeyChange(e.target.value as any)}
+            onChange={(e) => onSortKeyChange(e.target.value as any)}
             className="border px-2 py-1 rounded cursor-pointer text-xs"
             aria-label="Sort records by"
           >
@@ -109,35 +131,43 @@ const PatientHistory: React.FC<PatientHistoryProps> = ({
           </select>
 
           <button
-            onClick={() => setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+            onClick={() =>
+              setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))
+            }
             className="border px-2 py-1 rounded text-xs min-w-[90px]"
             title="Toggle sort direction"
           >
-            {sortDirection === 'asc' ? '↑ Ascending' : '↓ Descending'}
+            {sortDirection === "asc" ? "↑ Ascending" : "↓ Descending"}
           </button>
         </div>
       </div>
 
       {historyLoading ? (
-        <div className={`text-gray-500 ${compact ? 'text-xs' : 'text-sm'}`}>Loading...</div>
+        <div className={`text-gray-500 ${compact ? "text-xs" : "text-sm"}`}>
+          Loading...
+        </div>
       ) : historyError ? (
-        <div className={`text-red-600 ${compact ? 'text-xs' : 'text-sm'}`}>{historyError}</div>
+        <div className={`text-red-600 ${compact ? "text-xs" : "text-sm"}`}>
+          {historyError}
+        </div>
       ) : (
         <ul className={`flex-1 divide-y divide-gray-100 mb-2 overflow-y-auto`}>
           {paginatedHistory.map((item) => (
             <li
               key={item.fileId}
               className={`flex items-center gap-x-4 py-2 px-2 cursor-pointer hover:bg-gray-100 rounded ${
-                selected?.fileId === item.fileId ? 'bg-indigo-50' : ''
+                selected?.fileId === item.fileId ? "bg-indigo-50" : ""
               }`}
               onClick={() => onSelectRecord(item.fileId)}
             >
               <div
                 className={`truncate ${
-                  compact ? 'min-w-[120px] max-w-[40%]' : 'min-w-[140px] max-w-[25%]'
-                } ${compact ? 'text-s font-medium' : 'text-sm font-medium'}`}
+                  compact
+                    ? "min-w-[120px] max-w-[40%]"
+                    : "min-w-[140px] max-w-[25%]"
+                } ${compact ? "text-s font-medium" : "text-sm font-medium"}`}
               >
-                {item.patientName || 'Unknown'}
+                {item.patientName || "Unknown"}
               </div>
 
               {compact ? (
@@ -147,9 +177,11 @@ const PatientHistory: React.FC<PatientHistoryProps> = ({
                   </div>
 
                   <div
-                    className={`min-w-[60px] max-w-[15%] truncate text-sm font-normal ${classificationColor(item.classification)}`}
+                    className={`min-w-[60px] max-w-[15%] truncate text-sm font-normal ${classificationColor(
+                      item.classification
+                    )}`}
                   >
-                    {item.classification || 'Unknown'}
+                    {item.classification || "Unknown"}
                   </div>
                 </>
               ) : (
@@ -163,7 +195,9 @@ const PatientHistory: React.FC<PatientHistoryProps> = ({
                   </div>
 
                   <div className="min-w-[50px] max-w-[8%] truncate text-sm font-normal text-gray-700">
-                    {item.age !== undefined && item.age !== null ? item.age : '—'}
+                    {item.age !== undefined && item.age !== null
+                      ? item.age
+                      : "—"}
                   </div>
 
                   <div className="min-w-[70px] max-w-[12%] truncate text-sm font-normal text-gray-700">
@@ -171,11 +205,11 @@ const PatientHistory: React.FC<PatientHistoryProps> = ({
                   </div>
 
                   <div
-                    className={`min-w-[80px] max-w-[15%] truncate text-sm font-normal ${
-                      classificationColor(item.classification)
-                    }`}
+                    className={`min-w-[80px] max-w-[15%] truncate text-sm font-normal ${classificationColor(
+                      item.classification
+                    )}`}
                   >
-                    {item.classification || 'Unknown'}
+                    {item.classification || "Unknown"}
                   </div>
                 </>
               )}
@@ -187,18 +221,22 @@ const PatientHistory: React.FC<PatientHistoryProps> = ({
                     navigate(`/ecg/${item.fileId}/leads`);
                   }}
                   className={`p-1 rounded hover:bg-yellow-100 focus:outline-none text-hearteye_orange rounded-full hover:text-yellow-500 ${
-                    compact ? 'w-6 h-6' : 'w-8 h-8'
+                    compact ? "w-6 h-6" : "w-8 h-8"
                   }`}
                   aria-label={`View details of ${item.fileId}`}
                 >
                   <svg
-                    className={compact ? 'w-5 h-5' : 'w-6 h-6'}
+                    className={compact ? "w-5 h-5" : "w-6 h-6"}
                     fill="none"
                     stroke="currentColor"
                     strokeWidth={2}
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 5l7 7-7 7"
+                    />
                   </svg>
                 </button>
               </div>
@@ -211,20 +249,44 @@ const PatientHistory: React.FC<PatientHistoryProps> = ({
         <button
           className="text-xs px-2 py-1 rounded bg-hearteye_orange hover:bg-yellow-500 disabled:opacity-30"
           disabled={page === 1}
-          onClick={() => setPage(p => Math.max(1, p - 1))}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={3}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
-        <span className="text-xs mx-2">{page} / {totalPages || 1}</span>
+        <span className="text-xs mx-2">
+          {page} / {totalPages || 1}
+        </span>
         <button
           className="text-xs px-2 py-1 rounded bg-hearteye_orange hover:bg-yellow-500 disabled:opacity-30"
           disabled={page === totalPages || totalPages === 0}
-          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={3}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       </div>

@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import FileUpload from '../components/FileUpload';
-import PatientHistory from '../components/PatientHistory';
-import ECGAnalysisPanel from '../components/ECGAnalysisPanel';
-import SearchBar from '../components/SearchBar';
-import ecgService, { ECGRecord } from '../services/ecgService';
+import React, { useCallback, useEffect, useState } from "react";
+import ECGAnalysisPanel from "../components/ECGAnalysisPanel";
+import FileUpload from "../components/FileUpload";
+import PatientHistory from "../components/PatientHistory";
+import SearchBar from "../components/SearchBar";
+import logger from "../logger";
+import ecgService, { ECGRecord } from "../services/ecgService";
 
-// mapRecord outside of component to avoid re-creation on each render
 const mapRecord = (item: any): ECGRecord => ({
   id: item.id,
   fileId: item.file_id,
@@ -32,33 +32,32 @@ const Dashboard: React.FC = () => {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  // Pagination state for history
   const [, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState<ECGRecord[]>([]);
 
-  // Memoize fetchHistory to avoid ESLint warning
-  const fetchHistory = useCallback(async (searchQuery = '') => {
+  const fetchHistory = useCallback(async (searchQuery = "") => {
     setHistoryLoading(true);
     setHistoryError(null);
     try {
       const data = await ecgService.getHistory(searchQuery);
       const mapped = data.map(mapRecord);
       setHistory(mapped);
-      setPage(1); // Reset to first page on new search
+      setPage(1);
       if (mapped.length > 0) {
         try {
           const fullDetails = await ecgService.getECGDetails(mapped[0].fileId);
           setSelected(mapRecord(fullDetails));
-        } catch {
-          // Fallback to basic record if detail fetch fails
+        } catch (err) {
+          logger.error("Failed to fetch detailed ECG record:", err);
           setSelected(mapped[0]);
         }
       } else {
         setSelected(null);
       }
-    } catch (err: any) {
-      setHistoryError('Failed to load history.');
+    } catch (err) {
+      logger.error("Failed to load history:", err);
+      setHistoryError("Failed to load history.");
     } finally {
       setHistoryLoading(false);
     }
@@ -68,22 +67,20 @@ const Dashboard: React.FC = () => {
     fetchHistory();
   }, [fetchHistory]);
 
-  // Auto-suggest logic
   useEffect(() => {
-    if (search.trim() === '') {
+    if (search.trim() === "") {
       setSuggestions([]);
       return;
     }
     const lower = search.toLowerCase();
     const filtered = history.filter(
-      r =>
+      (r) =>
         (r.fileId && r.fileId.toLowerCase().includes(lower)) ||
         (r.patientName && r.patientName.toLowerCase().includes(lower))
     );
     setSuggestions(filtered.slice(0, 5));
   }, [search, history]);
 
-  // Upload handler from FileUpload component
   const handleUpload = async ({
     file,
     patientName,
@@ -100,20 +97,19 @@ const Dashboard: React.FC = () => {
       setUploadError(null);
       setUploadSuccess(null);
 
-      // Create form data here, including patient info
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('patient_name', patientName);
-      if (age !== null) formData.append('age', age.toString());
-      formData.append('gender', gender);
+      formData.append("file", file);
+      formData.append("patient_name", patientName);
+      if (age !== null) formData.append("age", age.toString());
+      formData.append("gender", gender);
 
-      // Pass the formData to the service
       await ecgService.uploadECG(formData);
 
-      setUploadSuccess('Upload successful!');
+      setUploadSuccess("Upload successful!");
       await fetchHistory();
     } catch (err: any) {
-      setUploadError(err.message || 'Upload failed.');
+      logger.error("Upload failed:", err);
+      setUploadError(err.message || "Upload failed.");
     } finally {
       setUploading(false);
     }
@@ -125,8 +121,9 @@ const Dashboard: React.FC = () => {
     try {
       const response = await ecgService.getECGDetails(fileId);
       setSelected(mapRecord(response));
-    } catch (err: any) {
-      setAnalysisError('Failed to load record details.');
+    } catch (err) {
+      logger.error("Failed to load ECG record details:", err);
+      setAnalysisError("Failed to load record details.");
     } finally {
       setAnalysisLoading(false);
     }
@@ -134,7 +131,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-auto">
-      {/* Search bar at the top */}
       <div className="px-8 pt-6 pb-2">
         <SearchBar
           search={search}
@@ -145,9 +141,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       <main className="flex-1 grid grid-cols-5 gap-6 p-8">
-        {/* Left column: Upload + History */}
         <section className="col-span-2 flex flex-col h-full gap-4">
-          {/* Upload (top, smaller) */}
           <div className="bg-white rounded-lg shadow p-3 flex flex-col items-center justify-center mb-2">
             <h3 className="font-semibold mb-2 text-base">Upload an ECG File</h3>
             <FileUpload
@@ -158,7 +152,6 @@ const Dashboard: React.FC = () => {
             />
           </div>
 
-          {/* Patient History (bottom, paginated) */}
           <PatientHistory
             history={history}
             selected={selected}
@@ -169,7 +162,6 @@ const Dashboard: React.FC = () => {
           />
         </section>
 
-        {/* Right column: Plot and values */}
         <section className="col-span-3 flex flex-col h-full">
           <ECGAnalysisPanel
             selected={selected}

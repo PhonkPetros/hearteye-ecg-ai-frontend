@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { ECGRecord } from '../services/ecgService';
+import React, { useEffect, useRef, useState } from "react";
+import { ECGRecord } from "../services/ecgService";
 
 interface SearchBarProps {
   search: string;
@@ -25,21 +25,21 @@ const SearchBar: React.FC<SearchBarProps> = ({
         setShowSuggestions(false);
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) return;
 
-    if (e.key === 'ArrowDown') {
-      setHighlightedIndex(i => Math.min(i + 1, suggestions.length - 1));
+    if (e.key === "ArrowDown") {
+      setHighlightedIndex((i) => Math.min(i + 1, suggestions.length - 1));
       e.preventDefault();
-    } else if (e.key === 'ArrowUp') {
-      setHighlightedIndex(i => Math.max(i - 1, 0));
+    } else if (e.key === "ArrowUp") {
+      setHighlightedIndex((i) => Math.max(i - 1, 0));
       e.preventDefault();
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
         const selected = suggestions[highlightedIndex];
         onSelect(selected.fileId);
@@ -49,13 +49,16 @@ const SearchBar: React.FC<SearchBarProps> = ({
         onSelect(search.trim());
         setShowSuggestions(false);
       }
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setShowSuggestions(false);
     }
   };
 
   return (
-    <div ref={searchBarRef} className="max-w-2xl mx-auto flex items-center space-x-2">
+    <div
+      ref={searchBarRef}
+      className="max-w-2xl mx-auto flex items-center space-x-2"
+    >
       {/* Input + dropdown container */}
       <div className="relative flex-1">
         <input
@@ -77,13 +80,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
         {showSuggestions && suggestions.length > 0 && (
           <ul
             className="absolute left-0 right-0 bg-white border border-gray-200 rounded-b-2xl shadow-lg z-20 max-h-56 overflow-y-auto"
-            style={{ top: 'calc(100% + 4px)' }}
+            style={{ top: "calc(100% + 4px)" }}
           >
             {suggestions.map((s, i) => (
               <li
                 key={s.fileId}
                 className={`px-5 py-3 text-base cursor-pointer flex items-center ${
-                  i === highlightedIndex ? 'bg-yellow-100' : 'hover:bg-yellow-50'
+                  i === highlightedIndex
+                    ? "bg-yellow-100"
+                    : "hover:bg-yellow-50"
                 }`}
                 onMouseDown={() => {
                   onSelect(s.fileId);
@@ -91,7 +96,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 }}
               >
                 <span className="font-medium">{s.fileId}</span>
-                {s.patientName && <span className="ml-2 text-gray-500">{s.patientName}</span>}
+                {s.patientName && (
+                  <span className="ml-2 text-gray-500">{s.patientName}</span>
+                )}
               </li>
             ))}
           </ul>

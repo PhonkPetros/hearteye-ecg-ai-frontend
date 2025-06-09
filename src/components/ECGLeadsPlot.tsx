@@ -1,7 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Line } from 'react-chartjs-2';
 import {
+  CategoryScale,
+  Chart,
   Chart as ChartJS,
+  Filler,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+} from "chart.js";
+import React, { useEffect, useRef, useState } from "react";
+import { Line } from "react-chartjs-2";
+import Modal from "react-modal";
+import logger from "../logger";
+
+ChartJS.register(
   LineElement,
   CategoryScale,
   LinearScale,
@@ -9,60 +23,64 @@ import {
   Tooltip,
   Filler,
   Title,
-  Legend,
-  Chart,
-} from 'chart.js';
-import Modal from 'react-modal';
+  Legend
+);
 
-ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Filler, Title, Legend);
-
-// ECG grid plugin 
+// ECG grid plugin
 const ecgGridPlugin = {
-  id: 'ecgGrid',
+  id: "ecgGrid",
   beforeDraw: (chart: Chart) => {
-    const { ctx, chartArea, scales } = chart;
-    const { left, right, top, bottom } = chartArea;
-    const xScale = scales.x;
-    const yScale = scales.y;
+    try {
+      const { ctx, chartArea, scales } = chart;
+      if (!ctx || !chartArea || !scales?.x || !scales?.y) {
+        logger.warn("ECG Grid Plugin: Missing chart context or scales");
+        return;
+      }
+      const { left, right, top, bottom } = chartArea;
+      const xScale = scales.x;
+      const yScale = scales.y;
 
-    ctx.save();
-    ctx.fillStyle = '#fff5f5';
-    ctx.fillRect(left, top, right - left, bottom - top);
+      ctx.save();
+      ctx.fillStyle = "#fff5f5";
+      ctx.fillRect(left, top, right - left, bottom - top);
 
-    const pxPerSec = xScale.getPixelForValue(1) - xScale.getPixelForValue(0);
-    const pxPerMv = yScale.getPixelForValue(0) - yScale.getPixelForValue(1);
+      const pxPerSec = xScale.getPixelForValue(1) - xScale.getPixelForValue(0);
+      const pxPerMv = yScale.getPixelForValue(0) - yScale.getPixelForValue(1);
 
-    const mmHoriz = pxPerSec * 0.04;
-    const mmVert = pxPerMv * 0.1;
+      const mmHoriz = pxPerSec * 0.04;
+      const mmVert = pxPerMv * 0.1;
 
-    const zeroX = xScale.getPixelForValue(0);
-    const zeroY = yScale.getPixelForValue(0);
+      const zeroX = xScale.getPixelForValue(0);
+      const zeroY = yScale.getPixelForValue(0);
 
-    for (let px = left; px <= right; px += mmHoriz) {
-      const offsetFromZero = px - zeroX;
-      const isBold = Math.round(offsetFromZero / mmHoriz) % 5 === 0;
+      for (let px = left; px <= right; px += mmHoriz) {
+        const offsetFromZero = px - zeroX;
+        const isBold = Math.round(offsetFromZero / mmHoriz) % 5 === 0;
 
-      ctx.beginPath();
-      ctx.strokeStyle = isBold ? '#faa' : '#fdd';
-      ctx.lineWidth = isBold ? 1 : 0.5;
-      ctx.moveTo(px, top);
-      ctx.lineTo(px, bottom);
-      ctx.stroke();
+        ctx.beginPath();
+        ctx.strokeStyle = isBold ? "#faa" : "#fdd";
+        ctx.lineWidth = isBold ? 1 : 0.5;
+        ctx.moveTo(px, top);
+        ctx.lineTo(px, bottom);
+        ctx.stroke();
+      }
+
+      for (let py = top; py <= bottom; py += mmVert) {
+        const offsetFromZero = py - zeroY;
+        const isBold = Math.round(offsetFromZero / mmVert) % 5 === 0;
+
+        ctx.beginPath();
+        ctx.strokeStyle = isBold ? "#faa" : "#fdd";
+        ctx.lineWidth = isBold ? 1 : 0.5;
+        ctx.moveTo(left, py);
+        ctx.lineTo(right, py);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    } catch (error) {
+      logger.error("Error in ecgGridPlugin beforeDraw:", error);
     }
-
-    for (let py = top; py <= bottom; py += mmVert) {
-      const offsetFromZero = py - zeroY;
-      const isBold = Math.round(offsetFromZero / mmVert) % 5 === 0;
-
-      ctx.beginPath();
-      ctx.strokeStyle = isBold ? '#faa' : '#fdd';
-      ctx.lineWidth = isBold ? 1 : 0.5;
-      ctx.moveTo(left, py);
-      ctx.lineTo(right, py);
-      ctx.stroke();
-    }
-
-    ctx.restore();
   },
 };
 
@@ -96,13 +114,34 @@ const ECGPlot: React.FC<ECGPlotProps> = ({
   width,
   height,
 }) => {
+  // Validate inputs early
+  if (!lead?.samples || lead.samples.length === 0) {
+    logger.warn(`ECGPlot: Lead ${lead?.lead_name} has no samples`);
+    return <div>No ECG data available for lead {lead?.lead_name}</div>;
+  }
+  if (!fs || fs <= 0) {
+    logger.error("ECGPlot: Invalid sampling frequency", fs);
+    return <div>Invalid sampling frequency.</div>;
+  }
+
   const yMin = -1.2;
   const yMax = 1.2;
 
   const computedHeight = height ?? VERTICAL_SQUARES * SMALL_SQUARE_PX;
 
-  const startIndex = Math.floor(startSec * fs);
-  const endIndex = Math.min(lead.samples.length, Math.floor((startSec + durationSec) * fs));
+  // Defensive slicing
+  const startIndex = Math.max(0, Math.floor(startSec * fs));
+  const endIndex = Math.min(
+    lead.samples.length,
+    Math.floor((startSec + durationSec) * fs)
+  );
+  if (startIndex >= endIndex) {
+    logger.warn(
+      `ECGPlot: startIndex >= endIndex (${startIndex} >= ${endIndex}) for lead ${lead.lead_name}`
+    );
+    return <div>Invalid ECG data range.</div>;
+  }
+
   const visibleSamples = lead.samples.slice(startIndex, endIndex);
 
   const labels = visibleSamples.map((_, i) => (startIndex + i) / fs);
@@ -110,11 +149,11 @@ const ECGPlot: React.FC<ECGPlotProps> = ({
   return (
     <div
       style={{
-        width: width ?? '100%',
+        width: width ?? "100%",
         height: computedHeight,
-        padding: 8,              
-        boxSizing: 'border-box',
-        userSelect: 'none',
+        padding: 8,
+        boxSizing: "border-box",
+        userSelect: "none",
       }}
     >
       <Line
@@ -122,9 +161,9 @@ const ECGPlot: React.FC<ECGPlotProps> = ({
           labels,
           datasets: [
             {
-              label: 'Voltage (mV)',
+              label: "Voltage (mV)",
               data: visibleSamples,
-              borderColor: '#000000',
+              borderColor: "#000000",
               borderWidth: 1,
               pointRadius: 0,
               fill: false,
@@ -136,7 +175,7 @@ const ECGPlot: React.FC<ECGPlotProps> = ({
           maintainAspectRatio: false,
           scales: {
             x: {
-              type: 'linear',
+              type: "linear",
               min: startSec,
               max: startSec + durationSec,
               ticks: { stepSize: 0.04 },
@@ -154,7 +193,8 @@ const ECGPlot: React.FC<ECGPlotProps> = ({
             tooltip: {
               callbacks: {
                 title: (context) => `Time: ${context[0].parsed.x.toFixed(2)} s`,
-                label: (context) => `Voltage: ${context.parsed.y.toFixed(2)} mV`,
+                label: (context) =>
+                  `Voltage: ${context.parsed.y.toFixed(2)} mV`,
               },
             },
           },
@@ -168,23 +208,33 @@ const ECGPlot: React.FC<ECGPlotProps> = ({
 };
 
 // Responsive wrapper component
-const ResponsiveECGPlot: React.FC<{ lead: Lead; fs: number }> = ({ lead, fs }) => {
+const ResponsiveECGPlot: React.FC<{ lead: Lead; fs: number }> = ({
+  lead,
+  fs,
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(300);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-      }
-    });
+    try {
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+          setContainerWidth(entry.contentRect.width);
+        }
+      });
 
-    resizeObserver.observe(containerRef.current);
-    setContainerWidth(containerRef.current.clientWidth);
+      resizeObserver.observe(containerRef.current);
+      setContainerWidth(containerRef.current.clientWidth);
 
-    return () => resizeObserver.disconnect();
+      return () => resizeObserver.disconnect();
+    } catch (error) {
+      logger.error(
+        "Error setting up ResizeObserver in ResponsiveECGPlot:",
+        error
+      );
+    }
   }, []);
 
   const numSquaresHoriz = containerWidth / SMALL_SQUARE_PX;
@@ -195,13 +245,19 @@ const ResponsiveECGPlot: React.FC<{ lead: Lead; fs: number }> = ({ lead, fs }) =
     <div
       ref={containerRef}
       style={{
-        width: '100%',
+        width: "100%",
         maxWidth: 600,
-        height: height + 16, 
-        boxSizing: 'border-box',
+        height: height + 16,
+        boxSizing: "border-box",
       }}
     >
-      <ECGPlot lead={lead} fs={fs} durationSec={durationSec} width={containerWidth} height={height} />
+      <ECGPlot
+        lead={lead}
+        fs={fs}
+        durationSec={durationSec}
+        width={containerWidth}
+        height={height}
+      />
     </div>
   );
 };
@@ -216,9 +272,23 @@ export default function LeadsPlotView({ data }: LeadsPlotViewProps) {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  if (!data) return <div className="p-4">Loading…</div>;
+  // Defensive check for data prop
+  if (!data) {
+    logger.warn("LeadsPlotView: No data provided");
+    return <div className="p-4">Loading…</div>;
+  }
 
   const { fs, leads } = data;
+
+  // Validate fs and leads before rendering
+  if (!fs || fs <= 0) {
+    logger.error("LeadsPlotView: Invalid sampling frequency", fs);
+    return <div className="p-4 text-red-600">Invalid sampling frequency.</div>;
+  }
+  if (!leads || leads.length === 0) {
+    logger.warn("LeadsPlotView: No leads available");
+    return <div className="p-4">No leads data available.</div>;
+  }
 
   return (
     <div className="container mx-auto p-4">
@@ -227,7 +297,7 @@ export default function LeadsPlotView({ data }: LeadsPlotViewProps) {
           <div
             key={lead.lead_name}
             className="bg-white shadow rounded p-2 cursor-pointer hover:ring ring-hearteye_orange"
-            style={{ width: '100%', height: 180, boxSizing: 'border-box' }}
+            style={{ width: "100%", height: 180, boxSizing: "border-box" }}
             onClick={() => {
               setModalLead(lead);
               setModalStartSec(0);
@@ -251,7 +321,9 @@ export default function LeadsPlotView({ data }: LeadsPlotViewProps) {
         {modalLead && (
           <>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Lead {modalLead.lead_name}</h2>
+              <h2 className="text-xl font-semibold">
+                Lead {modalLead.lead_name}
+              </h2>
               <button
                 onClick={() => setModalLead(null)}
                 className="text-2xl text-gray-500 hover:text-black"
@@ -263,20 +335,21 @@ export default function LeadsPlotView({ data }: LeadsPlotViewProps) {
             {/* Scroll container */}
             <div
               style={{
-                width: '100%',
+                width: "100%",
                 height: 420,
-                overflowX: 'auto',
-                overflowY: 'hidden',
-                whiteSpace: 'nowrap',
-                userSelect: 'none',
+                overflowX: "auto",
+                overflowY: "hidden",
+                whiteSpace: "nowrap",
+                userSelect: "none",
               }}
+              ref={scrollRef}
             >
               {/* Wide canvas representing full ECG */}
               <div
                 style={{
-                  width: (modalLead.samples.length / fs) * 400, // 400 px per second 
-                  height: '100%',
-                  display: 'inline-block',
+                  width: (modalLead.samples.length / fs) * 400, // 400 px per second
+                  height: "100%",
+                  display: "inline-block",
                 }}
               >
                 <Line
@@ -286,7 +359,7 @@ export default function LeadsPlotView({ data }: LeadsPlotViewProps) {
                       {
                         label: modalLead.lead_name,
                         data: modalLead.samples,
-                        borderColor: '#000000',
+                        borderColor: "#000000",
                         borderWidth: 1,
                         pointRadius: 0,
                         fill: false,
@@ -299,14 +372,14 @@ export default function LeadsPlotView({ data }: LeadsPlotViewProps) {
                     maintainAspectRatio: false,
                     scales: {
                       x: {
-                        type: 'linear',
+                        type: "linear",
                         min: 0,
                         max: modalLead.samples.length / fs,
                         ticks: {
                           stepSize: 0.1,
                           callback: (val: any) => Number(val).toFixed(1),
                         },
-                        grid: { color: 'transparent', drawTicks: false },
+                        grid: { color: "transparent", drawTicks: false },
                       },
                       y: {
                         min: -1.2,
@@ -315,16 +388,18 @@ export default function LeadsPlotView({ data }: LeadsPlotViewProps) {
                           stepSize: 0.1,
                           callback: (val: any) => Number(val).toFixed(1),
                         },
-                        grid: { color: 'transparent', drawTicks: false },
-                        title: { display: true, text: 'mV' },
+                        grid: { color: "transparent", drawTicks: false },
+                        title: { display: true, text: "mV" },
                       },
                     },
                     plugins: {
                       legend: { display: false },
                       tooltip: {
                         callbacks: {
-                          title: (context) => `Time: ${context[0].parsed.x.toFixed(2)} s`,
-                          label: (context) => `Voltage: ${context.parsed.y.toFixed(2)} mV`,
+                          title: (context) =>
+                            `Time: ${context[0].parsed.x.toFixed(2)} s`,
+                          label: (context) =>
+                            `Voltage: ${context.parsed.y.toFixed(2)} mV`,
                         },
                       },
                     },

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import LeadsPlotView from '../components/ECGLeadsPlot';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import LeadsPlotView from '../components/ECGLeadsPlot';
 import ecgService, { CleanedLeadsResponse } from '../services/ecgService';
 
 export default function ECGLeadsView() {
@@ -14,31 +14,49 @@ export default function ECGLeadsView() {
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    ecgService.getCleanedLeads(id)
-      .then((response) => {
+
+    const fetchLeads = async () => {
+      setLoading(true);
+      try {
+        const response = await ecgService.getCleanedLeads(id);
         setData(response);
-        setError(null);
         setNotesDraft(response.notes || '');
-      })
-      .catch(() => setError('Failed to load lead signals'))
-      .finally(() => setLoading(false));
+        setError(null);
+      } catch (error) {
+        setError('Failed to load lead signals');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeads();
   }, [id]);
 
-  async function saveNotes() {
-    if (!id) return;
+  const saveNotes = async () => {
+    if (!id || !notesDraft.trim()) return;
     try {
       await ecgService.updateNotes(id, notesDraft);
-      setData((prev) => prev ? { ...prev, notes: notesDraft } : prev);
+      setData(prev => (prev ? { ...prev, notes: notesDraft } : prev));
       setIsEditingNotes(false);
-    } catch {
+    } catch (error) {
       alert('Failed to save notes');
     }
-  }
+  };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="p-4 text-gray-600">Loading...</div>;
   if (error) return <div className="p-4 text-red-600">{error}</div>;
   if (!data) return null;
+
+  const {
+    age,
+    patient_name,
+    gender,
+    upload_date,
+    intervals,
+    classification,
+    confidence,
+    notes,
+  } = data;
 
   return (
     <main className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -48,30 +66,30 @@ export default function ECGLeadsView() {
       <div className="grid grid-cols-2 gap-2 text-sm mb-2">
         <div>
           <div className="text-gray-500">Patient Information</div>
-          <div>Age: <span className="font-medium">{data.age ?? '-'}</span></div>
-          <div>Patient: <span className="font-medium">{data.patient_name ?? '-'}</span></div>
-          <div>Gender: <span className="font-medium">{data.gender ?? '-'}</span></div>
-          <div>Uploaded: <span className="font-medium">{data.upload_date ? new Date(data.upload_date).toLocaleString() : '-'}</span></div>
+          <div>Age: <span className="font-medium">{age ?? '-'}</span></div>
+          <div>Patient: <span className="font-medium">{patient_name ?? '-'}</span></div>
+          <div>Gender: <span className="font-medium">{gender ?? '-'}</span></div>
+          <div>Uploaded: <span className="font-medium">{upload_date ? new Date(upload_date).toLocaleString() : '-'}</span></div>
         </div>
         <div>
           <div className="text-gray-500">Intervals</div>
-          <div>QRS: <span className="font-medium">{data.intervals?.qrs_duration ?? '-'}</span> ms</div>
-          <div>QT: <span className="font-medium">{data.intervals?.qt_interval ?? '-'}</span> ms</div>
-          <div>PQ: <span className="font-medium">{data.intervals?.pq_interval ?? '-'}</span> ms</div>
-          <div>P-wave: <span className="font-medium">{data.intervals?.p_wave_duration ?? '-'}</span> ms</div>
+          <div>QRS: <span className="font-medium">{intervals?.qrs_duration ?? '-'}</span> ms</div>
+          <div>QT: <span className="font-medium">{intervals?.qt_interval ?? '-'}</span> ms</div>
+          <div>PQ: <span className="font-medium">{intervals?.pq_interval ?? '-'}</span> ms</div>
+          <div>P-wave: <span className="font-medium">{intervals?.p_wave_duration ?? '-'}</span> ms</div>
         </div>
       </div>
 
       {/* Result and Confidence */}
       <div className="flex items-center gap-4 text-sm">
         <div>
-          Result: <span className={`font-semibold ${data.classification === 'Normal' ? 'text-green-600' : 'text-red-600'}`}>
-            {data.classification ?? '-'}
+          Result: <span className={`font-semibold ${classification === 'Normal' ? 'text-green-600' : 'text-red-600'}`}>
+            {classification ?? '-'}
           </span>
         </div>
         <div>
           Confidence: <span className="font-semibold text-green-600">
-            {data.confidence !== null && data.confidence !== undefined ? `${Math.round(data.confidence * 100)}%` : '-'}
+            {confidence != null ? `${Math.round(confidence * 100)}%` : '-'}
           </span>
         </div>
       </div>
@@ -83,8 +101,7 @@ export default function ECGLeadsView() {
           {!isEditingNotes && (
             <button
               onClick={() => setIsEditingNotes(true)}
-              className="text-blue-600 hover:underline text-xs flex items-center gap-1"
-              aria-label="Edit notes"
+              className="text-blue-600 hover:underline text-xs"
             >
               Edit
             </button>
@@ -102,13 +119,14 @@ export default function ECGLeadsView() {
             <div className="mt-2 flex gap-2">
               <button
                 onClick={saveNotes}
-                className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                disabled={notesDraft.trim() === (notes || '').trim()}
+                className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:bg-blue-300"
               >
                 Save
               </button>
               <button
                 onClick={() => {
-                  setNotesDraft(data.notes || '');
+                  setNotesDraft(notes || '');
                   setIsEditingNotes(false);
                 }}
                 className="bg-gray-300 px-3 py-1 rounded text-sm"
@@ -118,11 +136,13 @@ export default function ECGLeadsView() {
             </div>
           </>
         ) : (
-          <p className="text-gray-700 whitespace-pre-line">{data.notes || 'No notes available.'}</p>
+          <p className="text-gray-700 whitespace-pre-line">
+            {notes?.trim() || 'No notes available.'}
+          </p>
         )}
       </div>
 
-      {/* ECG plot component */}
+      {/* ECG Plot */}
       <LeadsPlotView data={data} />
     </main>
   );

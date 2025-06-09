@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import authService from '../services/authService';
+import React, { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import logger from "../logger";
+import authService from "../services/authService";
 
-const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; // 10 minutes inactivity
-const EXCLUDED_PATHS = ['/login', '/register'];
+const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; // 10 minutes
+const EXCLUDED_PATHS = ["/login", "/register"];
 
 const AuthWatcher: React.FC = () => {
   const inactivityTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -12,16 +13,16 @@ const AuthWatcher: React.FC = () => {
 
   const getExpiryFromToken = (token: string): number | null => {
     try {
-      const [, payload] = token.split('.');
+      const [, payload] = token.split(".");
       const decoded = JSON.parse(atob(payload));
-      return decoded.exp * 1000; // convert to milliseconds
+      return decoded.exp * 1000; // Convert to ms
     } catch {
       return null;
     }
   };
 
   useEffect(() => {
-    // If on excluded route, do not start timers
+    // Don't run timers on excluded routes
     if (EXCLUDED_PATHS.includes(location.pathname)) {
       if (inactivityTimeout.current) {
         clearTimeout(inactivityTimeout.current);
@@ -47,6 +48,7 @@ const AuthWatcher: React.FC = () => {
 
     const logout = () => {
       clearTimers();
+      logger.info("Logging out user due to inactivity or token expiry");
       authService.logout();
     };
 
@@ -54,25 +56,34 @@ const AuthWatcher: React.FC = () => {
       if (inactivityTimeout.current) {
         clearTimeout(inactivityTimeout.current);
       }
-      inactivityTimeout.current = setTimeout(() => {
-        logout();
-      }, INACTIVITY_LIMIT_MS);
+      inactivityTimeout.current = setTimeout(logout, INACTIVITY_LIMIT_MS);
     };
 
-    const userStr = localStorage.getItem('user');
+    const userStr = localStorage.getItem("user");
     if (!userStr) {
       logout();
       return;
     }
-    const user = JSON.parse(userStr);
+
+    let user: { access_token?: string };
+    try {
+      user = JSON.parse(userStr);
+    } catch (error) {
+      logger.error("Failed to parse user from localStorage", error);
+      logout();
+      return;
+    }
+
     const accessToken = user.access_token;
     if (!accessToken) {
+      logger.warn("No access token found for user, logging out");
       logout();
       return;
     }
 
     const expiry = getExpiryFromToken(accessToken);
     if (!expiry) {
+      logger.warn("Access token has no expiry or is malformed, logging out");
       logout();
       return;
     }
@@ -81,28 +92,27 @@ const AuthWatcher: React.FC = () => {
     const msUntilExpiry = expiry - now;
 
     if (msUntilExpiry <= 0) {
+      logger.info("Access token expired, logging out");
       logout();
       return;
     }
 
-    expiryTimeout.current = setTimeout(() => {
-      logout();
-    }, msUntilExpiry);
+    expiryTimeout.current = setTimeout(logout, msUntilExpiry);
 
     resetInactivityTimer();
 
-    const events = ['mousemove', 'keydown', 'mousedown', 'touchstart'];
-    events.forEach((event) => {
-      window.addEventListener(event, resetInactivityTimer);
-    });
+    const events = ["mousemove", "keydown", "mousedown", "touchstart"] as const;
+    events.forEach((event) =>
+      window.addEventListener(event, resetInactivityTimer)
+    );
 
     return () => {
       clearTimers();
-      events.forEach((event) => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
+      events.forEach((event) =>
+        window.removeEventListener(event, resetInactivityTimer)
+      );
     };
-  }, [location.pathname]); // re-run effect on path change
+  }, [location.pathname]);
 
   return null;
 };

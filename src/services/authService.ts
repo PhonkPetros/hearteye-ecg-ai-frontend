@@ -1,9 +1,5 @@
-import {instance} from './api';
-
-// Use different API URLs for development vs production
-const API_URL = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
-
-console.log('🔐 Auth service initialized with API_URL:', API_URL, 'Environment:', process.env.NODE_ENV);
+import logger from "../logger";
+import { instance } from "./api";
 
 export interface LoginData {
   username: string;
@@ -29,56 +25,84 @@ export interface AuthResponse {
 
 const authService = {
   async login(data: LoginData): Promise<AuthResponse> {
-    console.log('🔐 Attempting login for user:', data.username);
+    logger.debug("Attempting login for user:", data.username);
     try {
-      const response = await instance.post('/auth/login', data);
-      console.log('🔐 Login successful:', response.data);
-      if (response.data.access_token) {
-        localStorage.setItem('user', JSON.stringify(response.data));
-        console.log('🔐 Token stored in localStorage');
+      const response = await instance.post("/auth/login", data);
+      const authData = response.data;
+
+      if (authData?.access_token) {
+        localStorage.setItem("user", JSON.stringify(authData));
+        logger.info("User logged in and token stored");
+      } else {
+        logger.warn("Login succeeded but no token received");
       }
-      return response.data;
+
+      return authData;
     } catch (error) {
-      console.error('🔐 Login failed:', error);
+      logger.error("Login failed:", error);
       throw error;
     }
   },
 
   async register(data: RegisterData): Promise<{ message: string }> {
-    console.log('🔐 Attempting registration for user:', data.username);
+    logger.debug("Attempting registration for user:", data.username);
     try {
-      const response = await instance.post('/auth/register', data);
-      console.log('🔐 Registration successful:', response.data);
+      const response = await instance.post("/auth/register", data);
+      logger.info("Registration successful:", response.data);
       return response.data;
     } catch (error) {
-      console.error('🔐 Registration failed:', error);
+      logger.error("Registration failed:", error);
       throw error;
     }
   },
 
   logout(): void {
-    localStorage.removeItem('user');
-    window.location.href = '/login'; // redirect to login page on logout
-},
+    localStorage.removeItem("user");
+    logger.info("User logged out, clearing localStorage and redirecting");
+    window.location.href = "/login"; // redirect to login page on logout
+  },
 
   getCurrentUser(): User | null {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const userData = JSON.parse(userStr);
-      return userData.user;
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        logger.info("No current user in localStorage");
+        return null;
+      }
+
+      const parsed = JSON.parse(userStr);
+      if (parsed?.user) {
+        return parsed.user;
+      } else {
+        logger.warn("User object malformed in localStorage");
+        return null;
+      }
+    } catch (error) {
+      logger.error("Failed to parse user from localStorage:", error);
+      return null;
     }
-    console.log('🔐 No current user found');
-    return null;
   },
 
   getToken(): string | null {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const userData = JSON.parse(userStr);
-      return userData.access_token;
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        logger.info("No token in localStorage");
+        return null;
+      }
+
+      const parsed = JSON.parse(userStr);
+      if (parsed?.access_token) {
+        return parsed.access_token;
+      } else {
+        logger.warn("Access token not found in stored user");
+        return null;
+      }
+    } catch (error) {
+      logger.error("Failed to parse token from localStorage:", error);
+      return null;
     }
-    return null;
-  }
+  },
 };
 
-export default authService; 
+export default authService;

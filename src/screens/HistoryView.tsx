@@ -1,36 +1,43 @@
-import { useState, useEffect } from 'react';
-import SearchBar from '../components/SearchBar';
-import PatientHistory from '../components/PatientHistory';
-import ecgService, { ECGRecord } from '../services/ecgService';
+import { useEffect, useState } from "react";
+import PatientHistory from "../components/PatientHistory";
+import SearchBar from "../components/SearchBar";
+import logger from "../logger";
+import ecgService, { ECGRecord } from "../services/ecgService";
 
 export default function HistoryView() {
   const [records, setRecords] = useState<ECGRecord[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState<ECGRecord[]>([]);
   const [selected, setSelected] = useState<ECGRecord | null>(null);
   const pageSize = 10;
 
+  // Fetch history records
   useEffect(() => {
-    const fetch = async () => {
+    const fetchHistory = async () => {
       try {
+        logger.info("Fetching ECG history records");
         const raw = await ecgService.getHistory();
         const mapped = raw.map(mapRecord);
         setRecords(mapped);
-      } catch (err) {
-        console.error('Failed to fetch history');
+        logger.info(`Fetched ${mapped.length} history records`);
+      } catch (error) {
+        logger.error("Failed to fetch history records:", error);
       }
     };
-    fetch();
+
+    fetchHistory();
   }, []);
 
+  // Filter suggestions on search
   useEffect(() => {
     if (!search.trim()) {
       setSuggestions([]);
       return;
     }
+
     const lower = search.toLowerCase();
     const filtered = records.filter(
-      r =>
+      (r) =>
         (r.fileId && r.fileId.toLowerCase().includes(lower)) ||
         (r.patientName && r.patientName.toLowerCase().includes(lower))
     );
@@ -51,8 +58,11 @@ export default function HistoryView() {
   });
 
   const handleSelectRecord = (fileId: string) => {
-    const found = records.find(r => r.fileId === fileId);
-    if (found) setSelected(found);
+    const found = records.find((r) => r.fileId === fileId);
+    if (found) {
+      logger.info("Selected ECG record:", fileId);
+      setSelected(found);
+    }
   };
 
   return (

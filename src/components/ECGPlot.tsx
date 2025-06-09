@@ -1,16 +1,16 @@
-import { Line } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
   CategoryScale,
+  ChartData,
+  Chart as ChartJS,
+  ChartOptions,
+  Legend,
   LinearScale,
-  PointElement,
   LineElement,
+  PointElement,
   Title,
   Tooltip,
-  Legend,
-  ChartData,
-  ChartOptions
-} from 'chart.js';
+} from "chart.js";
+import { Line } from "react-chartjs-2";
 
 ChartJS.register(
   CategoryScale,
@@ -22,12 +22,12 @@ ChartJS.register(
   Legend
 );
 
-interface PeakSets { 
-  P: number[]; 
-  Q: number[]; 
-  R: number[]; 
-  S: number[]; 
-  T: number[]; 
+interface PeakSets {
+  P: number[];
+  Q: number[];
+  R: number[];
+  S: number[];
+  T: number[];
 }
 
 interface LeadData {
@@ -45,86 +45,90 @@ export default function ECGPlot({ ecgData }: ECGPlotProps) {
   const { signal, peaks, title } = ecgData;
   const labels = signal.map((_, i) => i);
 
-  // Create arrays for each peak type, with null for non-peak points
+  // Create arrays for each peak type with null for non-peak points
   const createPeakArray = (peakIndices: number[]) => {
     const arr = new Array(signal.length).fill(null);
-    peakIndices.forEach(i => arr[i] = signal[i]);
+    peakIndices.forEach((i) => {
+      if (i >= 0 && i < signal.length) {
+        arr[i] = signal[i];
+      }
+    });
     return arr;
   };
 
-  const data: ChartData<'line'> = {
+  const data: ChartData<"line"> = {
     labels,
     datasets: [
-      { 
-        label: 'Signal', 
-        data: signal, 
-        borderColor: 'blue', 
-        fill: false 
+      {
+        label: "Signal",
+        data: signal,
+        borderColor: "blue",
+        fill: false,
       },
       {
-        label: 'P Peaks',
+        label: "P Peaks",
         data: createPeakArray(peaks.P),
-        borderColor: 'red',
-        pointBackgroundColor: 'red',
+        borderColor: "red",
+        pointBackgroundColor: "red",
         pointRadius: 5,
-        showLine: false
+        showLine: false,
       },
       {
-        label: 'Q Peaks',
+        label: "Q Peaks",
         data: createPeakArray(peaks.Q),
-        borderColor: 'purple',
-        pointBackgroundColor: 'purple',
+        borderColor: "purple",
+        pointBackgroundColor: "purple",
         pointRadius: 5,
-        showLine: false
+        showLine: false,
       },
       {
-        label: 'R Peaks',
+        label: "R Peaks",
         data: createPeakArray(peaks.R),
-        borderColor: 'black',
-        pointBackgroundColor: 'black',
+        borderColor: "black",
+        pointBackgroundColor: "black",
         pointRadius: 5,
-        showLine: false
+        showLine: false,
       },
       {
-        label: 'S Peaks',
+        label: "S Peaks",
         data: createPeakArray(peaks.S),
-        borderColor: 'blue',
-        pointBackgroundColor: 'blue',
+        borderColor: "blue",
+        pointBackgroundColor: "blue",
         pointRadius: 5,
-        showLine: false
+        showLine: false,
       },
       {
-        label: 'T Peaks',
+        label: "T Peaks",
         data: createPeakArray(peaks.T),
-        borderColor: 'green',
-        pointBackgroundColor: 'green',
+        borderColor: "green",
+        pointBackgroundColor: "green",
         pointRadius: 5,
-        showLine: false
-      }
-    ]
+        showLine: false,
+      },
+    ],
   };
 
-  const options: ChartOptions<'line'> = {
-    plugins: { 
-      title: { 
-        display: !!title, 
-        text: title || '' 
-      } 
+  const options: ChartOptions<"line"> = {
+    plugins: {
+      title: {
+        display: !!title,
+        text: title || "",
+      },
     },
     scales: {
-      x: { 
-        title: { 
-          display: true, 
-          text: 'Sample' 
-        } 
+      x: {
+        title: {
+          display: true,
+          text: "Sample",
+        },
       },
-      y: { 
-        title: { 
-          display: true, 
-          text: 'Amplitude' 
-        } 
-      }
-    }
+      y: {
+        title: {
+          display: true,
+          text: "Amplitude",
+        },
+      },
+    },
   };
 
   return <Line data={data} options={options} />;

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import authService from '../services/authService';
+import { yupResolver } from "@hookform/resolvers/yup";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import * as yup from "yup";
+import logger from "../logger";
+import authService from "../services/authService";
 
 type FormData = {
   username: string;
@@ -13,18 +14,24 @@ type FormData = {
 };
 
 const schema = yup.object().shape({
-  username: yup.string().required('Username is required'),
-  email: yup.string().email('Invalid email address').required('Email is required'),
-  password: yup.string().min(4, 'Password must be at least 4 characters').required('Password is required'),
+  username: yup.string().required("Username is required"),
+  email: yup
+    .string()
+    .email("Invalid email address")
+    .required("Email is required"),
+  password: yup
+    .string()
+    .min(4, "Password must be at least 4 characters")
+    .required("Password is required"),
   confirmPassword: yup
     .string()
-    .oneOf([yup.ref('password')], 'Passwords must match')
-    .required('Confirm Password is required'),
+    .oneOf([yup.ref("password")], "Passwords must match")
+    .required("Confirm Password is required"),
 });
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const [registerError, setRegisterError] = useState('');
+  const [registerError, setRegisterError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const {
@@ -33,21 +40,27 @@ const Register: React.FC = () => {
     formState: { errors, isValid },
   } = useForm<FormData>({
     resolver: yupResolver(schema),
-    mode: 'onChange',
+    mode: "onChange",
   });
 
   const onSubmit = async (data: FormData) => {
-    setRegisterError('');
+    setRegisterError("");
     setLoading(true);
+    logger.info("Registering user:", data.username);
+
     try {
-      await authService.register({
+      const response = await authService.register({
         username: data.username,
         email: data.email,
         password: data.password,
       });
-      navigate('/login');
+
+      logger.debug("Registration successful:", response);
+      navigate("/login");
     } catch (err: any) {
-      setRegisterError(err.response?.data?.error || 'Registration failed');
+      const apiError = err?.response?.data?.error || "Registration failed";
+      logger.error("Registration error:", apiError, err);
+      setRegisterError(apiError);
     } finally {
       setLoading(false);
     }
@@ -55,7 +68,6 @@ const Register: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-blue-100 relative">
-      {/* Logo */}
       <img
         src="/LogoHeader.png"
         alt="Company Logo"
@@ -66,61 +78,105 @@ const Register: React.FC = () => {
         onSubmit={handleSubmit(onSubmit)}
         className="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Create Account</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+          Create Account
+        </h2>
 
         <div className="mb-4">
-          <label htmlFor="username" className="block text-gray-600 font-medium mb-1">Username</label>
+          <label
+            htmlFor="username"
+            className="block text-gray-600 font-medium mb-1"
+          >
+            Username
+          </label>
           <input
             id="username"
-            {...register('username')}
+            {...register("username")}
             className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-              errors.username ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'
+              errors.username
+                ? "border-red-500 focus:ring-red-400"
+                : "border-gray-300 focus:ring-blue-400"
             }`}
             placeholder="johndoe"
           />
-          {errors.username && <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>}
+          {errors.username && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.username.message}
+            </p>
+          )}
         </div>
 
         <div className="mb-4">
-          <label htmlFor="email" className="block text-gray-600 font-medium mb-1">Email</label>
+          <label
+            htmlFor="email"
+            className="block text-gray-600 font-medium mb-1"
+          >
+            Email
+          </label>
           <input
             id="email"
             type="email"
-            {...register('email')}
+            {...register("email")}
             className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-              errors.email ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'
+              errors.email
+                ? "border-red-500 focus:ring-red-400"
+                : "border-gray-300 focus:ring-blue-400"
             }`}
             placeholder="you@example.com"
           />
-          {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+          {errors.email && (
+            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+          )}
         </div>
 
         <div className="mb-4">
-          <label htmlFor="password" className="block text-gray-600 font-medium mb-1">Password</label>
+          <label
+            htmlFor="password"
+            className="block text-gray-600 font-medium mb-1"
+          >
+            Password
+          </label>
           <input
             id="password"
             type="password"
-            {...register('password')}
+            {...register("password")}
             className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-              errors.password ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'
+              errors.password
+                ? "border-red-500 focus:ring-red-400"
+                : "border-gray-300 focus:ring-blue-400"
             }`}
             placeholder="Enter password"
           />
-          {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
+          {errors.password && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.password.message}
+            </p>
+          )}
         </div>
 
         <div className="mb-4">
-          <label htmlFor="confirmPassword" className="block text-gray-600 font-medium mb-1">Confirm Password</label>
+          <label
+            htmlFor="confirmPassword"
+            className="block text-gray-600 font-medium mb-1"
+          >
+            Confirm Password
+          </label>
           <input
             id="confirmPassword"
             type="password"
-            {...register('confirmPassword')}
+            {...register("confirmPassword")}
             className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-              errors.confirmPassword ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'
+              errors.confirmPassword
+                ? "border-red-500 focus:ring-red-400"
+                : "border-gray-300 focus:ring-blue-400"
             }`}
             placeholder="Enter password again"
           />
-          {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>}
+          {errors.confirmPassword && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.confirmPassword.message}
+            </p>
+          )}
         </div>
 
         {registerError && (
@@ -132,15 +188,18 @@ const Register: React.FC = () => {
           disabled={!isValid || loading}
           className={`w-full text-white py-2 rounded-md transition ${
             isValid && !loading
-              ? 'bg-hearteye_blue hover:bg-hearteye_blue_hover'
-              : 'bg-gray-400 cursor-not-allowed'
+              ? "bg-hearteye_blue hover:bg-hearteye_blue_hover"
+              : "bg-gray-400 cursor-not-allowed"
           }`}
         >
-          {loading ? 'Creating account…' : 'Create account'}
+          {loading ? "Creating account…" : "Create account"}
         </button>
 
         <div className="text-sm text-center mt-4">
-          <Link to="/login" className="font-medium text-orange hover:text-hearteye_orange">
+          <Link
+            to="/login"
+            className="font-medium text-orange hover:text-hearteye_orange"
+          >
             Already have an account? Sign in
           </Link>
         </div>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import authService from '../services/authService';
+import { yupResolver } from "@hookform/resolvers/yup";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
+import * as yup from "yup";
+import logger from "../logger";
+import authService from "../services/authService";
 
 type FormData = {
   username: string;
@@ -11,13 +12,16 @@ type FormData = {
 };
 
 const schema = yup.object().shape({
-  username: yup.string().required('Username is required'),
-  password: yup.string().min(4, 'Password must be at least 4 characters').required('Password is required'),
+  username: yup.string().required("Username is required"),
+  password: yup
+    .string()
+    .min(4, "Password must be at least 4 characters")
+    .required("Password is required"),
 });
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [loginError, setLoginError] = useState('');
+  const [loginError, setLoginError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const {
@@ -26,17 +30,27 @@ const Login: React.FC = () => {
     formState: { errors, isValid },
   } = useForm<FormData>({
     resolver: yupResolver(schema),
-    mode: 'onChange',
+    mode: "onChange",
   });
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
-    setLoginError('');
+    setLoginError("");
+    logger.info("Attempting login for user:", data.username);
     try {
       await authService.login(data);
-      navigate('/dashboard');
+      logger.info("Login successful for user:", data.username);
+      navigate("/dashboard");
     } catch (error: any) {
-      setLoginError(error.response?.data?.error || 'Login failed');
+      const message = error?.response?.data?.error || "Login failed";
+      logger.error(
+        "Login failed for user:",
+        data.username,
+        "| Reason:",
+        message,
+        error
+      );
+      setLoginError(message);
     } finally {
       setLoading(false);
     }
@@ -44,7 +58,6 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-blue-100 relative">
-      {/* Logo in top-left corner */}
       <img
         src="/LogoHeader.png"
         alt="Company Logo"
@@ -55,41 +68,57 @@ const Login: React.FC = () => {
         onSubmit={handleSubmit(onSubmit)}
         className="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Login</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+          Login
+        </h2>
 
         <div className="mb-4">
-          <label htmlFor="username" className="block text-gray-600 font-medium mb-1">
+          <label
+            htmlFor="username"
+            className="block text-gray-600 font-medium mb-1"
+          >
             Username
           </label>
           <input
             id="username"
             type="text"
-            {...register('username')}
+            {...register("username")}
             className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-              errors.username ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'
+              errors.username
+                ? "border-red-500 focus:ring-red-400"
+                : "border-gray-300 focus:ring-blue-400"
             }`}
             placeholder="johndoe"
           />
           {errors.username && (
-            <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>
+            <p className="text-red-500 text-sm mt-1">
+              {errors.username.message}
+            </p>
           )}
         </div>
 
         <div className="mb-4">
-          <label htmlFor="password" className="block text-gray-600 font-medium mb-1">
+          <label
+            htmlFor="password"
+            className="block text-gray-600 font-medium mb-1"
+          >
             Password
           </label>
           <input
             id="password"
             type="password"
-            {...register('password')}
+            {...register("password")}
             className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-              errors.password ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'
+              errors.password
+                ? "border-red-500 focus:ring-red-400"
+                : "border-gray-300 focus:ring-blue-400"
             }`}
             placeholder="Enter password"
           />
           {errors.password && (
-            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+            <p className="text-red-500 text-sm mt-1">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
@@ -102,15 +131,18 @@ const Login: React.FC = () => {
           disabled={!isValid || loading}
           className={`w-full text-white py-2 rounded-md transition ${
             isValid && !loading
-              ? 'bg-hearteye_blue hover:bg-hearteye_blue_hover'
-              : 'bg-gray-400 cursor-not-allowed'
+              ? "bg-hearteye_blue hover:bg-hearteye_blue_hover"
+              : "bg-gray-400 cursor-not-allowed"
           }`}
         >
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? "Signing in…" : "Sign in"}
         </button>
 
         <div className="text-sm text-center mt-4">
-          <Link to="/register" className="font-medium text-orange hover:text-hearteye_orange">
+          <Link
+            to="/register"
+            className="font-medium text-orange hover:text-hearteye_orange"
+          >
             Don't have an account? Register
           </Link>
         </div>
